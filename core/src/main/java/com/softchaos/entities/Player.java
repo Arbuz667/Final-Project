@@ -1,5 +1,7 @@
 package com.softchaos.entities;
 
+import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.Input;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.utils.Array;
@@ -27,18 +29,40 @@ public class Player {
         level   = 1;
         xp      = 0;
         hitbox  = new Rectangle(0, 0, 0.8f, 0.8f);
+        // Start at screen center (world units)
+        x = Constants.SCREEN_WIDTH  / Constants.PPM / 2f;
+        y = Constants.SCREEN_HEIGHT / Constants.PPM / 2f;
     }
 
     public void update(float delta) {
-        // TODO M1: WASD movement via Gdx.input
-        // TODO M1: sync hitbox position
-        hitbox.setPosition(x - hitbox.width / 2f, y - hitbox.height / 2f);
-
         if (knockbackTimer > 0) {
             x += knockbackX * delta;
             y += knockbackY * delta;
             knockbackTimer -= delta;
+        } else {
+            // WASD movement
+            float moveX = 0, moveY = 0;
+            if (Gdx.input.isKeyPressed(Input.Keys.W)) moveY += 1;
+            if (Gdx.input.isKeyPressed(Input.Keys.S)) moveY -= 1;
+            if (Gdx.input.isKeyPressed(Input.Keys.A)) moveX -= 1;
+            if (Gdx.input.isKeyPressed(Input.Keys.D)) moveX += 1;
+            // Normalize diagonal movement so speed is consistent
+            if (moveX != 0 && moveY != 0) {
+                moveX *= 0.7071f;
+                moveY *= 0.7071f;
+            }
+            x += moveX * speed * delta;
+            y += moveY * speed * delta;
         }
+
+        // Clamp to screen bounds
+        float half   = hitbox.width / 2f;
+        float worldW = Constants.SCREEN_WIDTH  / Constants.PPM;
+        float worldH = Constants.SCREEN_HEIGHT / Constants.PPM;
+        x = Math.max(half, Math.min(worldW - half, x));
+        y = Math.max(half, Math.min(worldH - half, y));
+
+        hitbox.setPosition(x - hitbox.width / 2f, y - hitbox.height / 2f);
 
         // Update all equipped weapons
         for (Weapon w : weapons) {
@@ -70,7 +94,7 @@ public class Player {
     }
 
     public void render(SpriteBatch batch) {
-        // TODO M1: draw player sprite at (x, y)
+        // TODO M4: draw player sprite at (x, y)
     }
 
     public void dispose() {
