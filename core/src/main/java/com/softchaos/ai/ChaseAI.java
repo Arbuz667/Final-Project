@@ -8,7 +8,6 @@ public class ChaseAI implements EnemyAI {
 
     @Override
     public void update(Enemy self, Player player, float delta) {
-        // TODO M2: move self toward player.x/y at self.speed
         float dx = player.x - self.x;
         float dy = player.y - self.y;
         float len = (float) Math.sqrt(dx * dx + dy * dy);
