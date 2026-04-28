@@ -1,6 +1,11 @@
 package com.softchaos.screens;
 
+import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.Input;
 import com.badlogic.gdx.Screen;
+import com.badlogic.gdx.graphics.Color;
+import com.badlogic.gdx.graphics.GL20;
+import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.softchaos.SoftChaosGame;
 import com.softchaos.managers.AudioManager;
@@ -11,6 +16,7 @@ public class MainMenuScreen implements Screen {
 
     private final SoftChaosGame game;
     private SpriteBatch batch;
+    private BitmapFont font;
 
     public MainMenuScreen(SoftChaosGame game) {
         this.game = game;
@@ -19,14 +25,31 @@ public class MainMenuScreen implements Screen {
     @Override
     public void show() {
         batch = new SpriteBatch();
+        font  = new BitmapFont();
+        font.setColor(Color.WHITE);
+        font.getData().setScale(2f);
         AudioManager.getInstance().playMusic(MusicType.MENU);
     }
 
     @Override
     public void render(float delta) {
-        // TODO M1: render background, title, Play/Quit buttons (libGDX Scene2D or manual)
-        // On Play click: game.setScreen(new CharacterSelectScreen(game));
-        // On Quit click: Gdx.app.exit();
+        Gdx.gl.glClearColor(0.05f, 0.05f, 0.1f, 1f);
+        Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
+
+        // TODO M4: replace with proper UI (Scene2D buttons, background art)
+        batch.begin();
+        font.draw(batch, "SOFT CHAOS",       Gdx.graphics.getWidth() / 2f - 120, Gdx.graphics.getHeight() / 2f + 60);
+        font.draw(batch, "ENTER - Play",     Gdx.graphics.getWidth() / 2f - 100, Gdx.graphics.getHeight() / 2f);
+        font.draw(batch, "ESC   - Quit",     Gdx.graphics.getWidth() / 2f - 100, Gdx.graphics.getHeight() / 2f - 50);
+        batch.end();
+
+        if (Gdx.input.isKeyJustPressed(Input.Keys.ENTER)) {
+            game.setScreen(new CharacterSelectScreen(game));
+        }
+        if (Gdx.input.isKeyJustPressed(Input.Keys.ESCAPE)) {
+            Gdx.app.exit();
+        }
+
         AudioManager.getInstance().update(delta);
     }
 
@@ -42,5 +65,6 @@ public class MainMenuScreen implements Screen {
     @Override
     public void dispose() {
         if (batch != null) { batch.dispose(); batch = null; }
+        if (font  != null) { font.dispose();  font  = null; }
     }
 }
