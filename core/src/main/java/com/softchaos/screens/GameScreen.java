@@ -1,6 +1,11 @@
 package com.softchaos.screens;
 
+import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Screen;
+import com.badlogic.gdx.graphics.Color;
+import com.badlogic.gdx.graphics.GL20;
+import com.badlogic.gdx.graphics.OrthographicCamera;
+import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.utils.Array;
 import com.softchaos.SoftChaosGame;
@@ -16,6 +21,10 @@ import com.softchaos.systems.EnemySpawner;
 import com.softchaos.systems.UpgradeSystem;
 import com.softchaos.systems.WaveManager;
 import com.softchaos.systems.XPSystem;
+import com.softchaos.utils.Constants;
+import com.softchaos.utils.LocationType;
+import com.softchaos.utils.MusicType;
+import com.softchaos.weapons.Sword;
 import com.softchaos.weapons.WeaponSystem;
 
 /** Main gameplay screen. update() + draw() loop for all systems. */
@@ -26,6 +35,8 @@ public class GameScreen implements Screen,
 
     private final SoftChaosGame game;
     private SpriteBatch batch;
+    private ShapeRenderer shapeRenderer;
+    private OrthographicCamera camera;
 
     private Player player;
     private Array<Enemy> enemies;
@@ -45,9 +56,16 @@ public class GameScreen implements Screen,
 
     @Override
     public void show() {
-        batch       = new SpriteBatch();
-        enemies     = new Array<>();
-        projectiles = new Array<>();
+        float worldW = Constants.SCREEN_WIDTH  / Constants.PPM;
+        float worldH = Constants.SCREEN_HEIGHT / Constants.PPM;
+
+        camera = new OrthographicCamera();
+        camera.setToOrtho(false, worldW, worldH);
+
+        batch         = new SpriteBatch();
+        shapeRenderer = new ShapeRenderer();
+        enemies       = new Array<>();
+        projectiles   = new Array<>();
 
         player        = new Player();
         weaponSystem  = new WeaponSystem();
@@ -58,15 +76,22 @@ public class GameScreen implements Screen,
         chestSystem   = new ChestSystem();
         uiManager     = new UIManager(player, waveManager, xpSystem);
 
+        // Give player a starting weapon
+        player.weapons.add(new Sword());
+
         waveManager.setListener(this);
         xpSystem.setListener(this);
         chestSystem.setListener(this);
 
-        waveManager.startWave(GameStateManager.getInstance().currentLocation, 120f);
+        // Default to FOREST if no location selected yet
+        LocationType loc = GameStateManager.getInstance().currentLocation;
+        if (loc == null) {
+            loc = LocationType.FOREST;
+            GameStateManager.getInstance().currentLocation = loc;
+        }
+        waveManager.startWave(loc, 120f);
 
-        AudioManager.getInstance().playMusic(
-            com.softchaos.utils.MusicType.valueOf(
-                GameStateManager.getInstance().currentLocation.name()));
+        AudioManager.getInstance().playMusic(MusicType.valueOf(loc.name()));
     }
 
     @Override
@@ -79,6 +104,9 @@ public class GameScreen implements Screen,
         player.update(delta);
         waveManager.update(delta);
         weaponSystem.update(delta, player, enemies, projectiles);
+
+        // Track session time
+        GameStateManager.getInstance().sessionTime += delta;
 
         // Update enemies
         for (int i = enemies.size - 1; i >= 0; i--) {
@@ -93,7 +121,7 @@ public class GameScreen implements Screen,
             }
         }
 
-        // Update projectiles
+        // Update projectiles + collision
         for (int i = projectiles.size - 1; i >= 0; i--) {
             Projectile p = projectiles.get(i);
             p.update(delta);
@@ -118,11 +146,38 @@ public class GameScreen implements Screen,
     }
 
     private void draw() {
+        // Clear screen
+        Gdx.gl.glClearColor(0.08f, 0.08f, 0.08f, 1f);
+        Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
+
+        camera.update();
+
+        // Debug shapes — replaced with sprites in M4
+        shapeRenderer.setProjectionMatrix(camera.combined);
+        shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
+
+        // Player: blue square
+        shapeRenderer.setColor(Color.BLUE);
+        shapeRenderer.rect(player.x - 0.4f, player.y - 0.4f, 0.8f, 0.8f);
+
+        // Enemies: red squares
+        shapeRenderer.setColor(Color.RED);
+        for (Enemy e : enemies) {
+            shapeRenderer.rect(e.x - 0.4f, e.y - 0.4f, 0.8f, 0.8f);
+        }
+
+        // Projectiles: yellow small squares
+        shapeRenderer.setColor(Color.YELLOW);
+        for (Projectile p : projectiles) {
+            float h = p.size / 2f;
+            shapeRenderer.rect(p.x - h, p.y - h, p.size, p.size);
+        }
+
+        shapeRenderer.end();
+
+        batch.setProjectionMatrix(camera.combined);
         batch.begin();
-        // TODO M1: draw background
-        player.render(batch);
-        for (Enemy e : enemies)         e.render(batch);
-        for (Projectile p : projectiles) p.render(batch);
+        // TODO M4: draw background, sprite overlays
         uiManager.render(batch);
         batch.end();
     }
@@ -153,7 +208,9 @@ public class GameScreen implements Screen,
         showChestScreen(chest);
     }
 
-    @Override public void resize(int width, int height) {}
+    @Override public void resize(int width, int height) {
+        camera.setToOrtho(false, width / Constants.PPM, height / Constants.PPM);
+    }
     @Override public void pause() {}
     @Override public void resume() {}
 
@@ -164,7 +221,8 @@ public class GameScreen implements Screen,
 
     @Override
     public void dispose() {
-        if (batch != null) { batch.dispose(); batch = null; }
+        if (batch != null)         { batch.dispose();         batch = null; }
+        if (shapeRenderer != null) { shapeRenderer.dispose(); shapeRenderer = null; }
         player.dispose();
         uiManager.dispose();
     }
