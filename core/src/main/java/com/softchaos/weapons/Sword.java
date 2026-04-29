@@ -39,6 +39,7 @@ public class Sword extends Weapon {
         p.size    = size;
         p.piercing = piercing;
         p.setVelocityToward(target.x, target.y, projectileSpeed);
+        p.lifetime = 0.4f; // melee swing arc lasts 0.4s
         projectiles.add(p);
 
         resetCooldown();

@@ -20,6 +20,7 @@ public class Projectile {
     public Rectangle hitbox;
 
     private int hitCount = 0;
+    public float lifetime = -1f; // -1 = no expiry
 
     public Projectile() {
         hitbox = new Rectangle();
@@ -28,6 +29,10 @@ public class Projectile {
 
     public void update(float delta) {
         if (!active) return;
+        if (lifetime > 0) {
+            lifetime -= delta;
+            if (lifetime <= 0) { active = false; return; }
+        }
         x += velX * delta;
         y += velY * delta;
         hitbox.setPosition(x - size / 2f, y - size / 2f);
@@ -64,6 +69,7 @@ public class Projectile {
         velX = velY = 0;
         explosionRadius = 0;
         piercing = 0;
+        lifetime = -1f;
     }
 
     /** Convenience factory — set velocity from angle (radians) and speed. */
