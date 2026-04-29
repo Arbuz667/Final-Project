@@ -5,8 +5,8 @@ public final class Constants {
     private Constants() {}
 
     // Window
-    public static final int SCREEN_WIDTH  = 1280;
-    public static final int SCREEN_HEIGHT = 720;
+    public static final int SCREEN_WIDTH  = 1440;
+    public static final int SCREEN_HEIGHT = 960;
     public static final String TITLE = "Soft Chaos";
 
     // World units per pixel (libGDX camera scaling)
