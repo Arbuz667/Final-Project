@@ -25,22 +25,25 @@ public class MainMenuScreen implements Screen {
     @Override
     public void show() {
         batch = new SpriteBatch();
-        font  = new BitmapFont();
-        font.setColor(Color.WHITE);
-        font.getData().setScale(2f);
+        font = new BitmapFont();
+        font.getData().setScale(2.5f);
         AudioManager.getInstance().playMusic(MusicType.MENU);
     }
 
     @Override
     public void render(float delta) {
-        Gdx.gl.glClearColor(0.05f, 0.05f, 0.1f, 1f);
+        Gdx.gl.glClearColor(0.05f, 0.05f, 0.15f, 1f);
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
 
-        // TODO M4: replace with proper UI (Scene2D buttons, background art)
+        int cx = Gdx.graphics.getWidth()  / 2;
+        int cy = Gdx.graphics.getHeight() / 2;
+
         batch.begin();
-        font.draw(batch, "SOFT CHAOS",       Gdx.graphics.getWidth() / 2f - 120, Gdx.graphics.getHeight() / 2f + 60);
-        font.draw(batch, "ENTER - Play",     Gdx.graphics.getWidth() / 2f - 100, Gdx.graphics.getHeight() / 2f);
-        font.draw(batch, "ESC   - Quit",     Gdx.graphics.getWidth() / 2f - 100, Gdx.graphics.getHeight() / 2f - 50);
+        font.setColor(Color.WHITE);
+        font.draw(batch, "SOFT CHAOS",   cx - 150f, cy + 100f);
+        font.setColor(Color.LIGHT_GRAY);
+        font.draw(batch, "ENTER - Play", cx - 120f, cy + 20f);
+        font.draw(batch, "ESC   - Quit", cx - 120f, cy - 50f);
         batch.end();
 
         if (Gdx.input.isKeyJustPressed(Input.Keys.ENTER)) {

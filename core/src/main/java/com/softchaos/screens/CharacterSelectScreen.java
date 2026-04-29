@@ -25,22 +25,27 @@ public class CharacterSelectScreen implements Screen {
     @Override
     public void show() {
         batch = new SpriteBatch();
-        font  = new BitmapFont();
-        font.setColor(Color.WHITE);
-        font.getData().setScale(1.8f);
+        font = new BitmapFont();
+        font.getData().setScale(2.5f);
     }
 
     @Override
     public void render(float delta) {
-        Gdx.gl.glClearColor(0.05f, 0.05f, 0.1f, 1f);
+        Gdx.gl.glClearColor(0.05f, 0.05f, 0.15f, 1f);
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
 
-        // TODO M4: replace with proper character card UI
+        int cx = Gdx.graphics.getWidth()  / 2;
+        int cy = Gdx.graphics.getHeight() / 2;
+
         batch.begin();
-        font.draw(batch, "SELECT LOCATION",      Gdx.graphics.getWidth() / 2f - 160, Gdx.graphics.getHeight() / 2f + 80);
-        font.draw(batch, "1 - Forest",           Gdx.graphics.getWidth() / 2f - 80,  Gdx.graphics.getHeight() / 2f + 20);
-        font.draw(batch, "2 - City",             Gdx.graphics.getWidth() / 2f - 80,  Gdx.graphics.getHeight() / 2f - 30);
-        font.draw(batch, "3 - Ocean",            Gdx.graphics.getWidth() / 2f - 80,  Gdx.graphics.getHeight() / 2f - 80);
+        font.setColor(Color.WHITE);
+        font.draw(batch, "SELECT LOCATION", cx - 180f, cy + 120f);
+        font.setColor(Color.GREEN);
+        font.draw(batch, "1 - Forest",      cx - 100f, cy + 30f);
+        font.setColor(Color.YELLOW);
+        font.draw(batch, "2 - City",        cx - 100f, cy - 40f);
+        font.setColor(Color.CYAN);
+        font.draw(batch, "3 - Ocean",       cx - 100f, cy - 110f);
         batch.end();
 
         if (Gdx.input.isKeyJustPressed(Input.Keys.NUM_1)) startGame(LocationType.FOREST);
