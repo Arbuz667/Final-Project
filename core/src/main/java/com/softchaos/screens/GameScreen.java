@@ -5,6 +5,7 @@ import com.badlogic.gdx.Screen;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.OrthographicCamera;
+import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.utils.Array;
@@ -42,6 +43,9 @@ public class GameScreen implements Screen,
     private Array<Enemy> enemies;
     private Array<Projectile> projectiles;
 
+    private Texture playerTexture;
+    private Texture grassTexture;
+
     private WeaponSystem   weaponSystem;
     private WaveManager    waveManager;
     private EnemySpawner   enemySpawner;
@@ -64,6 +68,9 @@ public class GameScreen implements Screen,
 
         batch         = new SpriteBatch();
         shapeRenderer = new ShapeRenderer();
+        playerTexture = new Texture(Gdx.files.internal("player.png"));
+        grassTexture  = new Texture(Gdx.files.internal("grass.png"));
+        grassTexture.setWrap(com.badlogic.gdx.graphics.Texture.TextureWrap.Repeat, com.badlogic.gdx.graphics.Texture.TextureWrap.Repeat);
         enemies       = new Array<>();
         projectiles   = new Array<>();
 
@@ -152,32 +159,36 @@ public class GameScreen implements Screen,
 
         camera.update();
 
-        // Debug shapes — replaced with sprites in M4
+        // 1. Background
+        float worldW = Constants.SCREEN_WIDTH  / Constants.PPM;
+        float worldH = Constants.SCREEN_HEIGHT / Constants.PPM;
+        float tileSize = grassTexture.getWidth() / Constants.PPM;
+        batch.setProjectionMatrix(camera.combined);
+        batch.begin();
+        for (float tx = 0; tx < worldW; tx += tileSize) {
+            for (float ty = 0; ty < worldH; ty += tileSize) {
+                batch.draw(grassTexture, tx, ty, tileSize, tileSize);
+            }
+        }
+        batch.end();
+
+        // 2. Enemies + projectiles on top of background
         shapeRenderer.setProjectionMatrix(camera.combined);
         shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
-
-        // Player: blue square
-        shapeRenderer.setColor(Color.BLUE);
-        shapeRenderer.rect(player.x - 0.4f, player.y - 0.4f, 0.8f, 0.8f);
-
-        // Enemies: red squares
         shapeRenderer.setColor(Color.RED);
         for (Enemy e : enemies) {
             shapeRenderer.rect(e.x - 0.4f, e.y - 0.4f, 0.8f, 0.8f);
         }
-
-        // Projectiles: yellow small squares
         shapeRenderer.setColor(Color.YELLOW);
         for (Projectile p : projectiles) {
             float h = p.size / 2f;
             shapeRenderer.rect(p.x - h, p.y - h, p.size, p.size);
         }
-
         shapeRenderer.end();
 
-        batch.setProjectionMatrix(camera.combined);
+        // 3. Player sprite + UI on top of everything
         batch.begin();
-        // TODO M4: draw background, sprite overlays
+        batch.draw(playerTexture, player.x - 1.046875f, player.y - 1.046875f, 2.09375f, 2.09375f);
         uiManager.render(batch);
         batch.end();
     }
@@ -223,6 +234,8 @@ public class GameScreen implements Screen,
     public void dispose() {
         if (batch != null)         { batch.dispose();         batch = null; }
         if (shapeRenderer != null) { shapeRenderer.dispose(); shapeRenderer = null; }
+        if (playerTexture != null) { playerTexture.dispose(); playerTexture = null; }
+        if (grassTexture  != null) { grassTexture.dispose();  grassTexture  = null; }
         player.dispose();
         uiManager.dispose();
     }
