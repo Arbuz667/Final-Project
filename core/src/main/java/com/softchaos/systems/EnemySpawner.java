@@ -10,8 +10,8 @@ import com.softchaos.utils.LocationType;
 
 public class EnemySpawner {
 
-    private static final float INITIAL_INTERVAL = 2.5f;  // seconds between spawns
-    private static final float MIN_INTERVAL     = 0.4f;  // floor for scaling
+    private static final float INITIAL_INTERVAL = 1.5f;  // seconds between spawns
+    private static final float MIN_INTERVAL     = 0.3f;  // floor for scaling
     private static final float SCALE_RATE       = 0.003f; // reduction per second
 
     private final Array<Enemy> activeEnemies;
