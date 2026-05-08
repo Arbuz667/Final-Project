@@ -10,9 +10,9 @@ import com.softchaos.utils.LocationType;
 
 public class EnemySpawner {
 
-    private static final float INITIAL_INTERVAL = 1.5f;  // seconds between spawns
-    private static final float MIN_INTERVAL     = 0.3f;  // floor for scaling
-    private static final float SCALE_RATE       = 0.003f; // reduction per second
+    private static final float INITIAL_INTERVAL = 0.8f;  // seconds between spawns
+    private static final float MIN_INTERVAL     = 0.15f; // floor for scaling
+    private static final float SCALE_RATE       = 0.005f; // reduction per second
 
     private final Array<Enemy> activeEnemies;
     private float spawnTimer;
@@ -87,8 +87,8 @@ public class EnemySpawner {
         if (location == null) return EnemyType.ALIEN;
         switch (location) {
             case FOREST: return EnemyType.ALIEN;
-            case CITY:   return EnemyType.ROBOT;
             case OCEAN:  return EnemyType.SHARK;
+            case SPACE:  return EnemyType.ROBOT;
             default:     return EnemyType.ALIEN;
         }
     }

@@ -47,7 +47,7 @@ public class GameScreen implements Screen,
     private Array<Projectile> projectiles;
 
     private Texture playerTexture;
-    private Texture grassTexture;
+    private Texture backgroundTexture;
 
     private WeaponSystem   weaponSystem;
     private WaveManager    waveManager;
@@ -66,6 +66,11 @@ public class GameScreen implements Screen,
     // Floating damage numbers
     private Array<DamageNumber> damageNumbers;
 
+    // Location-transition fade
+    private float    fadeAlpha        = 0f;
+    private boolean  fadingOut        = false;
+    private Runnable pendingTransition;
+
     private static class DamageNumber {
         float x, y, alpha;
         String text;
@@ -78,7 +83,19 @@ public class GameScreen implements Screen,
         }
     }
 
+    /**
+     * Start a fresh run from the current location.
+     */
     public GameScreen(SoftChaosGame game) {
+        this(game, null, null, null);
+    }
+
+    /**
+     * Advance to the next location, carrying player + progression systems over.
+     * Pass {@code null} for fresh-start defaults.
+     */
+    public GameScreen(SoftChaosGame game, Player existingPlayer,
+                      XPSystem existingXpSystem, UpgradeSystem existingUpgradeSystem) {
         this.game = game;
 
         float worldW = Constants.SCREEN_WIDTH  / Constants.PPM;
@@ -90,9 +107,14 @@ public class GameScreen implements Screen,
         batch         = new SpriteBatch();
         shapeRenderer = new ShapeRenderer();
         playerTexture = new Texture(Gdx.files.internal("player.png"));
-        grassTexture  = new Texture(Gdx.files.internal("grass.png"));
-        grassTexture.setWrap(com.badlogic.gdx.graphics.Texture.TextureWrap.Repeat,
-                             com.badlogic.gdx.graphics.Texture.TextureWrap.Repeat);
+
+        // Load full-screen background for current location
+        LocationType loc = GameStateManager.getInstance().currentLocation;
+        if (loc == null) {
+            loc = LocationType.FOREST;
+            GameStateManager.getInstance().currentLocation = loc;
+        }
+        backgroundTexture = new Texture(Gdx.files.internal(loc.backgroundFile()));
 
         hudCamera = new OrthographicCamera();
         hudCamera.setToOrtho(false, Constants.SCREEN_WIDTH, Constants.SCREEN_HEIGHT);
@@ -106,28 +128,40 @@ public class GameScreen implements Screen,
         enemies       = new Array<>();
         projectiles   = new Array<>();
 
-        player        = new Player();
+        if (existingPlayer != null) {
+            player   = existingPlayer;
+            // Reset position to world centre for the new location
+            player.x = worldW / 2f;
+            player.y = worldH / 2f;
+        } else {
+            player = new Player();
+            player.weapons.add(new Sword());
+        }
+
         weaponSystem  = new WeaponSystem();
         enemySpawner  = new EnemySpawner(enemies);
         waveManager   = new WaveManager(enemySpawner);
-        xpSystem      = new XPSystem();
-        upgradeSystem = new UpgradeSystem(weaponSystem);
+
+        // Carry over level + upgrade progress across locations, or start fresh
+        if (existingXpSystem != null) {
+            xpSystem = existingXpSystem;
+        } else {
+            xpSystem = new XPSystem();
+        }
+        xpSystem.setListener(this);
+
+        if (existingUpgradeSystem != null) {
+            upgradeSystem = existingUpgradeSystem;
+        } else {
+            upgradeSystem = new UpgradeSystem(weaponSystem);
+        }
+
         chestSystem   = new ChestSystem();
         uiManager     = new UIManager(player, waveManager, xpSystem);
 
-        // Give player a starting weapon
-        player.weapons.add(new Sword());
-
         waveManager.setListener(this);
-        xpSystem.setListener(this);
         chestSystem.setListener(this);
 
-        // Default to FOREST if no location selected yet
-        LocationType loc = GameStateManager.getInstance().currentLocation;
-        if (loc == null) {
-            loc = LocationType.FOREST;
-            GameStateManager.getInstance().currentLocation = loc;
-        }
         waveManager.startWave(loc, 120f);
 
         AudioManager.getInstance().playMusic(MusicType.valueOf(loc.name()));
@@ -147,6 +181,17 @@ public class GameScreen implements Screen,
     }
 
     private void update(float delta) {
+        // Freeze gameplay during fade-out; only advance the fade timer
+        if (fadingOut) {
+            fadeAlpha = Math.min(1f, fadeAlpha + delta * 1.8f);
+            if (fadeAlpha >= 1f && pendingTransition != null) {
+                Runnable r = pendingTransition;
+                pendingTransition = null;
+                r.run();
+            }
+            return;
+        }
+
         player.update(delta);
         waveManager.update(delta);
         weaponSystem.update(delta, player, enemies, projectiles);
@@ -214,17 +259,12 @@ public class GameScreen implements Screen,
 
         camera.update();
 
-        // 1. Background
+        // 1. Background — single full-screen PNG stretched to world size
         float worldW = Constants.SCREEN_WIDTH  / Constants.PPM;
         float worldH = Constants.SCREEN_HEIGHT / Constants.PPM;
-        float tileSize = grassTexture.getWidth() / Constants.PPM;
         batch.setProjectionMatrix(camera.combined);
         batch.begin();
-        for (float tx = 0; tx < worldW; tx += tileSize) {
-            for (float ty = 0; ty < worldH; ty += tileSize) {
-                batch.draw(grassTexture, tx, ty, tileSize, tileSize);
-            }
-        }
+        batch.draw(backgroundTexture, 0, 0, worldW, worldH);
         batch.end();
 
         // 2. Enemies + HP bars + projectiles
@@ -269,6 +309,18 @@ public class GameScreen implements Screen,
 
         // 4. HUD (XP bar) in screen pixels
         drawHud();
+
+        // 5. Fade-to-black overlay (location transition)
+        if (fadeAlpha > 0f) {
+            Gdx.gl.glEnable(GL20.GL_BLEND);
+            Gdx.gl.glBlendFunc(GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA);
+            shapeRenderer.setProjectionMatrix(hudCamera.combined);
+            shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
+            shapeRenderer.setColor(0f, 0f, 0f, fadeAlpha);
+            shapeRenderer.rect(0, 0, Constants.SCREEN_WIDTH, Constants.SCREEN_HEIGHT);
+            shapeRenderer.end();
+            Gdx.gl.glDisable(GL20.GL_BLEND);
+        }
     }
 
     public void showUpgradeScreen() {
@@ -416,7 +468,20 @@ public class GameScreen implements Screen,
 
     // --- WaveManager.WaveListener ---
     @Override public void onBossKilled()  { game.setScreen(new WinScreen(game)); }
-    @Override public void onWaveEnd()     { /* endless mode started, continue */ }
+
+    @Override
+    public void onWaveEnd() {
+        // Start fade-to-black; transition fires once fully black
+        fadingOut = true;
+        pendingTransition = () -> {
+            boolean advanced = GameStateManager.getInstance().advanceLocation();
+            if (advanced) {
+                game.setScreen(new GameScreen(game, player, xpSystem, upgradeSystem));
+            } else {
+                game.setScreen(new WinScreen(game));
+            }
+        };
+    }
 
     // --- XPSystem.XPListener ---
     @Override
@@ -447,8 +512,8 @@ public class GameScreen implements Screen,
     public void dispose() {
         if (batch != null)         { batch.dispose();         batch = null; }
         if (shapeRenderer != null) { shapeRenderer.dispose(); shapeRenderer = null; }
-        if (playerTexture != null) { playerTexture.dispose(); playerTexture = null; }
-        if (grassTexture  != null) { grassTexture.dispose();  grassTexture  = null; }
+        if (playerTexture    != null) { playerTexture.dispose();    playerTexture    = null; }
+        if (backgroundTexture != null) { backgroundTexture.dispose(); backgroundTexture = null; }
         if (hudFont       != null) { hudFont.dispose();       hudFont       = null; }
         if (hudFontBig    != null) { hudFontBig.dispose();    hudFontBig    = null; }
         player.dispose();

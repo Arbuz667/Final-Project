@@ -41,4 +41,15 @@ public class GameStateManager {
         sessionTime      = 0f;
         selectedCharacter = 0;
     }
+
+    /**
+     * Advances currentLocation to the next one in FOREST→OCEAN→SPACE sequence.
+     * @return true if advanced successfully, false if already at the last location (SPACE).
+     */
+    public boolean advanceLocation() {
+        LocationType next = currentLocation.next();
+        if (next == null) return false;
+        currentLocation = next;
+        return true;
+    }
 }

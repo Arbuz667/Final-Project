@@ -11,7 +11,7 @@ import com.softchaos.SoftChaosGame;
 import com.softchaos.managers.GameStateManager;
 import com.softchaos.utils.LocationType;
 
-/** 3 character cards. On click: save choice to GameStateManager → GameScreen. */
+/** Start screen. Press ENTER to begin the run from Forest. */
 public class CharacterSelectScreen implements Screen {
 
     private final SoftChaosGame game;
@@ -39,23 +39,18 @@ public class CharacterSelectScreen implements Screen {
 
         batch.begin();
         font.setColor(Color.WHITE);
-        font.draw(batch, "SELECT LOCATION", cx - 180f, cy + 120f);
-        font.setColor(Color.GREEN);
-        font.draw(batch, "1 - Forest",      cx - 100f, cy + 30f);
+        font.draw(batch, "SOFT CHAOS",         cx - 130f, cy + 80f);
+        font.setColor(new Color(0.6f, 1f, 0.6f, 1f));
+        font.draw(batch, "Forest  ->  Ocean  ->  Space", cx - 310f, cy);
         font.setColor(Color.YELLOW);
-        font.draw(batch, "2 - City",        cx - 100f, cy - 40f);
-        font.setColor(Color.CYAN);
-        font.draw(batch, "3 - Ocean",       cx - 100f, cy - 110f);
+        font.draw(batch, "[ENTER] to start",   cx - 170f, cy - 80f);
         batch.end();
 
-        if (Gdx.input.isKeyJustPressed(Input.Keys.NUM_1)) startGame(LocationType.FOREST);
-        if (Gdx.input.isKeyJustPressed(Input.Keys.NUM_2)) startGame(LocationType.CITY);
-        if (Gdx.input.isKeyJustPressed(Input.Keys.NUM_3)) startGame(LocationType.OCEAN);
-    }
-
-    private void startGame(LocationType location) {
-        GameStateManager.getInstance().currentLocation = location;
-        game.setScreen(new GameScreen(game));
+        if (Gdx.input.isKeyJustPressed(Input.Keys.ENTER)) {
+            GameStateManager.getInstance().reset();
+            GameStateManager.getInstance().currentLocation = LocationType.FOREST;
+            game.setScreen(new GameScreen(game));
+        }
     }
 
     @Override public void resize(int width, int height) {}
