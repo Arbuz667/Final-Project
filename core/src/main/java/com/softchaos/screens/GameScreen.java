@@ -164,6 +164,11 @@ public class GameScreen implements Screen,
                 // TODO M3: roll chest drop
                 enemySpawner.freeEnemy(e);
                 i--;
+                continue;
+            }
+            // Enemy touches player → deal damage
+            if (e.hitbox.overlaps(player.hitbox)) {
+                player.takeDamage(e.damage * delta);
             }
         }
 
