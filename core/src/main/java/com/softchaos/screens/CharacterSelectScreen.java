@@ -9,7 +9,6 @@ import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.softchaos.SoftChaosGame;
 import com.softchaos.managers.GameStateManager;
-import com.softchaos.utils.LocationType;
 
 /** Start screen. Press ENTER to begin the run from Forest. */
 public class CharacterSelectScreen implements Screen {
@@ -48,8 +47,7 @@ public class CharacterSelectScreen implements Screen {
 
         if (Gdx.input.isKeyJustPressed(Input.Keys.ENTER)) {
             GameStateManager.getInstance().reset();
-            GameStateManager.getInstance().currentLocation = LocationType.FOREST;
-            game.setScreen(new GameScreen(game));
+            game.setScreen(new WeaponSelectScreen(game));
         }
     }
 

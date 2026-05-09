@@ -22,9 +22,15 @@ public class Projectile {
     private int hitCount = 0;
     public float lifetime = -1f; // -1 = no expiry
 
+    /** Remaining bounces (Shurikens). 0 = no bounce. */
+    public int bouncesLeft = 0;
+    /** Enemies already hit in this bounce chain — avoid re-hitting them. */
+    public Array<Enemy> visitedEnemies;
+
     public Projectile() {
-        hitbox = new Rectangle();
-        active = true;
+        hitbox         = new Rectangle();
+        active         = true;
+        visitedEnemies = new Array<>();
     }
 
     public void update(float delta) {
@@ -70,6 +76,8 @@ public class Projectile {
         explosionRadius = 0;
         piercing = 0;
         lifetime = -1f;
+        bouncesLeft = 0;
+        if (visitedEnemies != null) visitedEnemies.clear();
     }
 
     /** Convenience factory — set velocity from angle (radians) and speed. */

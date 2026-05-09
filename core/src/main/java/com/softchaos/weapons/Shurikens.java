@@ -6,6 +6,7 @@ import com.softchaos.entities.Enemy;
 import com.softchaos.entities.Player;
 import com.softchaos.entities.Projectile;
 import com.softchaos.utils.ProjectileType;
+import com.softchaos.utils.WeaponRarity;
 import com.softchaos.utils.WeaponType;
 
 /** Fires 3 shurikens that bounce between up to 3 enemies. */
@@ -17,11 +18,12 @@ public class Shurikens extends Weapon {
         id              = "shurikens";
         name            = "Shurikens";
         type            = WeaponType.SHURIKENS;
-        cooldown        = 0.7f;
-        damage          = 12f;
+        rarity          = WeaponRarity.RARE;
+        cooldown        = 1.3f;
+        damage          = 20f;
         size            = 0.25f;
         projectileCount = 3;
-        piercing        = MAX_BOUNCES;
+        piercing        = -1;   // bounce logic controls lifetime
         projectileSpeed = 12f;
         explosionRadius = 0f;
     }
@@ -36,12 +38,13 @@ public class Shurikens extends Weapon {
 
             Projectile p = new Projectile();
             p.projectileType = ProjectileType.SHURIKEN;
-            p.source   = type;
-            p.x        = player.x;
-            p.y        = player.y;
-            p.damage   = damage;
-            p.size     = size;
-            p.piercing = MAX_BOUNCES; // TODO M3: implement actual bounce logic
+            p.source     = type;
+            p.x          = player.x;
+            p.y          = player.y;
+            p.damage     = damage;
+            p.size       = size;
+            p.piercing   = -1;           // bounce logic controls deactivation
+            p.bouncesLeft = MAX_BOUNCES;
             p.setVelocityToward(target.x, target.y, projectileSpeed);
             projectiles.add(p);
         }

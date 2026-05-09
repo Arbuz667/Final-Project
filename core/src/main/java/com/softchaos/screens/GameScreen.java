@@ -1,6 +1,7 @@
 package com.softchaos.screens;
 
 import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.Input;
 import com.badlogic.gdx.Screen;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.GL20;
@@ -27,6 +28,7 @@ import com.softchaos.systems.XPSystem;
 import com.softchaos.utils.Constants;
 import com.softchaos.utils.LocationType;
 import com.softchaos.utils.MusicType;
+import com.softchaos.utils.WeaponRarity;
 import com.softchaos.weapons.Sword;
 import com.softchaos.weapons.Weapon;
 import com.softchaos.weapons.WeaponSystem;
@@ -135,7 +137,8 @@ public class GameScreen implements Screen,
             player.y = worldH / 2f;
         } else {
             player = new Player();
-            player.weapons.add(new Sword());
+            Weapon start = GameStateManager.getInstance().startingWeapon;
+            player.weapons.add(start != null ? start : new Sword());
         }
 
         weaponSystem  = new WeaponSystem();
@@ -181,6 +184,13 @@ public class GameScreen implements Screen,
     }
 
     private void update(float delta) {
+        // TAB — instant return to main menu
+        if (Gdx.input.isKeyJustPressed(Input.Keys.TAB)) {
+            GameStateManager.getInstance().reset();
+            game.setScreen(new MainMenuScreen(game));
+            return;
+        }
+
         // Freeze gameplay during fade-out; only advance the fade timer
         if (fadingOut) {
             fadeAlpha = Math.min(1f, fadeAlpha + delta * 1.8f);
@@ -224,14 +234,32 @@ public class GameScreen implements Screen,
             if (!p.active) { projectiles.removeIndex(i); continue; }
 
             // Collision with enemies
-            for (Enemy e : enemies) {
-                if (p.hitbox.overlaps(e.hitbox)) {
-                    float hpBefore = e.hp;
-                    p.onHit(e);
-                    float dealt = hpBefore - e.hp;
-                    if (dealt > 0) damageNumbers.add(new DamageNumber(e.x, e.y, dealt));
-                    if (!p.active) break;
+            for (int ei = 0; ei < enemies.size; ei++) {
+                Enemy e = enemies.get(ei);
+                // Skip already-visited enemies for bouncing projectiles
+                if (p.bouncesLeft > 0 && p.visitedEnemies.contains(e, true)) continue;
+                if (!p.hitbox.overlaps(e.hitbox)) continue;
+
+                float hpBefore = e.hp;
+                p.onHit(e);
+                float dealt = hpBefore - e.hp;
+                if (dealt > 0) damageNumbers.add(new DamageNumber(e.x, e.y, dealt));
+
+                // Bounce logic: redirect to nearest unvisited enemy
+                if (p.bouncesLeft > 0) {
+                    p.visitedEnemies.add(e);
+                    Enemy next = findNearestBounceTarget(p, enemies);
+                    if (next != null) {
+                        float speed = (float) Math.sqrt(p.velX * p.velX + p.velY * p.velY);
+                        p.setVelocityToward(next.x, next.y, speed);
+                        p.bouncesLeft--;
+                        p.active = true; // keep alive
+                    } else {
+                        p.active = false;
+                    }
                 }
+
+                if (!p.active) break;
             }
         }
 
@@ -393,12 +421,23 @@ public class GameScreen implements Screen,
         shapeRenderer.setColor(0.1f, 0.05f, 0.05f, 0.85f);
         shapeRenderer.rect(sw - 140f, topStripY + 5f, 132f, 28f);
 
-        // ── Weapon stats panel (bottom-left) ─────────────────────────
-        if (!player.weapons.isEmpty()) {
-            shapeRenderer.setColor(0f, 0f, 0f, 0.5f);
-            shapeRenderer.rect(4f, 4f, 188f, 92f);
-            shapeRenderer.setColor(0.2f, 0.2f, 0.2f, 0.7f);
-            shapeRenderer.rect(4f, 92f, 188f, 2f);
+        // ── Weapon inventory slots (bottom-center) ───────────────────
+        float slotW = 130f, slotH = 66f, slotGap = 8f;
+        float slotsTotal = Constants.PLAYER_MAX_WEAPONS * slotW + (Constants.PLAYER_MAX_WEAPONS - 1) * slotGap;
+        float slotStartX = (sw - slotsTotal) / 2f;
+        float slotY = 4f;
+        for (int i = 0; i < Constants.PLAYER_MAX_WEAPONS; i++) {
+            float sx = slotStartX + i * (slotW + slotGap);
+            boolean filled = i < player.weapons.size;
+            shapeRenderer.setColor(0f, 0f, 0f, filled ? 0.72f : 0.35f);
+            shapeRenderer.rect(sx, slotY, slotW, slotH);
+            if (filled) {
+                float[] rc = rarityRGB(player.weapons.get(i).rarity);
+                shapeRenderer.setColor(rc[0], rc[1], rc[2], 0.9f);
+            } else {
+                shapeRenderer.setColor(0.18f, 0.18f, 0.22f, 0.5f);
+            }
+            shapeRenderer.rect(sx, slotY + slotH - 4f, slotW, 4f);
         }
 
         shapeRenderer.end();
@@ -436,19 +475,34 @@ public class GameScreen implements Screen,
         hudFont.setColor(new Color(1f, 0.55f, 0.2f, 1f));
         hudFont.draw(batch, "K: " + kills, sw - 134f, topStripY + topStripH - 10f);
 
-        // Weapon stats
-        if (!player.weapons.isEmpty()) {
-            Weapon w = player.weapons.first();
-            hudFont.getData().setScale(1.3f);
-            hudFont.setColor(new Color(0.8f, 0.8f, 0.8f, 1f));
-            hudFont.draw(batch, w.name, 10f, 92f);
-            hudFont.setColor(Color.YELLOW);
-            hudFont.draw(batch, String.format("DMG  %.1f",  w.damage),    10f, 70f);
-            hudFont.setColor(new Color(0.35f, 0.9f, 0.35f, 1f));
-            hudFont.draw(batch, String.format("CD   %.2fs", w.cooldown),   10f, 48f);
-            if (w.projectileCount > 1) {
-                hudFont.setColor(Color.CYAN);
-                hudFont.draw(batch, "PROJ " + w.projectileCount, 10f, 26f);
+        // ── Weapon inventory slots text ──────────────────────
+        slotW = 130f; slotH = 66f; slotGap = 8f;
+        slotsTotal = Constants.PLAYER_MAX_WEAPONS * slotW + (Constants.PLAYER_MAX_WEAPONS - 1) * slotGap;
+        slotStartX = (sw - slotsTotal) / 2f;
+        slotY = 4f;
+        for (int i = 0; i < Constants.PLAYER_MAX_WEAPONS; i++) {
+            float sx = slotStartX + i * (slotW + slotGap);
+            boolean filled = i < player.weapons.size;
+            // Slot index number
+            hudFont.getData().setScale(0.95f);
+            hudFont.setColor(0.45f, 0.45f, 0.5f, 0.8f);
+            hudFont.draw(batch, String.valueOf(i + 1), sx + 5f, slotY + slotH - 4f);
+            if (filled) {
+                Weapon w = player.weapons.get(i);
+                hudFont.getData().setScale(1.25f);
+                hudFont.setColor(Color.WHITE);
+                glyphLayout.setText(hudFont, w.name);
+                hudFont.draw(batch, w.name, sx + (slotW - glyphLayout.width) / 2f, slotY + slotH - 18f);
+                hudFont.getData().setScale(0.95f);
+                hudFont.setColor(Color.YELLOW);
+                String stats = String.format("%.0f DMG  %.1fs", w.damage, w.cooldown);
+                glyphLayout.setText(hudFont, stats);
+                hudFont.draw(batch, stats, sx + (slotW - glyphLayout.width) / 2f, slotY + 18f);
+            } else {
+                hudFont.getData().setScale(1.0f);
+                hudFont.setColor(0.28f, 0.28f, 0.32f, 0.8f);
+                glyphLayout.setText(hudFont, "- empty -");
+                hudFont.draw(batch, "- empty -", sx + (slotW - glyphLayout.width) / 2f, slotY + slotH / 2f + 6f);
             }
         }
 
@@ -460,6 +514,31 @@ public class GameScreen implements Screen,
         }
 
         batch.end();
+    }
+
+    /** Finds nearest enemy not already visited by a bouncing projectile. */
+    private Enemy findNearestBounceTarget(Projectile p, Array<Enemy> enemies) {
+        Enemy nearest = null;
+        float minDist = Float.MAX_VALUE;
+        for (int i = 0; i < enemies.size; i++) {
+            Enemy e = enemies.get(i);
+            if (p.visitedEnemies.contains(e, true)) continue;
+            float dx = e.x - p.x;
+            float dy = e.y - p.y;
+            float d  = dx * dx + dy * dy;
+            if (d < minDist) { minDist = d; nearest = e; }
+        }
+        return nearest;
+    }
+
+    private float[] rarityRGB(WeaponRarity r) {
+        if (r == null) return new float[]{0.6f, 0.6f, 0.6f};
+        switch (r) {
+            case RARE:      return new float[]{0.3f, 0.6f, 1.0f};
+            case EPIC:      return new float[]{0.7f, 0.3f, 1.0f};
+            case LEGENDARY: return new float[]{1.0f, 0.8f, 0.1f};
+            default:        return new float[]{0.65f, 0.65f, 0.65f}; // COMMON
+        }
     }
 
     public void showChestScreen(Chest chest) {

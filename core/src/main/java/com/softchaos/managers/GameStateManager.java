@@ -21,6 +21,9 @@ public class GameStateManager {
     // Selected character index (0–2)
     public int selectedCharacter;
 
+    /** Starting weapon chosen on WeaponSelectScreen; cleared on reset(). */
+    public Weapon startingWeapon;
+
     private GameStateManager() {
         reset();
     }
@@ -40,6 +43,7 @@ public class GameStateManager {
         kills            = 0;
         sessionTime      = 0f;
         selectedCharacter = 0;
+        startingWeapon   = null;
     }
 
     /**

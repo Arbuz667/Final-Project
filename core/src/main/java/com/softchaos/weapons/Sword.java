@@ -5,6 +5,7 @@ import com.softchaos.entities.Enemy;
 import com.softchaos.entities.Player;
 import com.softchaos.entities.Projectile;
 import com.softchaos.utils.ProjectileType;
+import com.softchaos.utils.WeaponRarity;
 import com.softchaos.utils.WeaponType;
 
 /** Melee swing: attacks nearest enemy within range, hitbox placed toward target. */
@@ -16,8 +17,9 @@ public class Sword extends Weapon {
         id             = "sword";
         name           = "Sword";
         type           = WeaponType.SWORD;
-        cooldown       = 0.8f;
-        damage         = 25f;
+        rarity         = WeaponRarity.COMMON;
+        cooldown       = 0.85f;
+        damage         = 12f;
         size           = 1.5f;  // hitbox size
         projectileCount = 1;
         piercing       = -1;    // hits all enemies in arc

@@ -17,7 +17,7 @@ public class PotatoThrower extends Weapon {
         id              = "potato_thrower";
         name            = "Potato Thrower";
         type            = WeaponType.POTATO_THROWER;
-        cooldown        = 1.2f;
+        cooldown        = 1.7f;
         damage          = 30f;
         size            = 0.4f;
         projectileCount = 1;
@@ -33,17 +33,25 @@ public class PotatoThrower extends Weapon {
         Enemy target = findNearest(player, enemies);
         if (target == null) return;
 
-        Projectile p = new Projectile();
-        p.projectileType  = ProjectileType.POTATO;
-        p.source          = type;
-        p.x               = player.x;
-        p.y               = player.y;
-        p.damage          = damage;
-        p.size            = size;
-        p.piercing        = 0;
-        p.explosionRadius = explosionRadius;
-        p.setVelocityToward(target.x, target.y, projectileSpeed);
-        projectiles.add(p);
+        float dx    = target.x - player.x;
+        float dy    = target.y - player.y;
+        float angle = (float) Math.atan2(dy, dx);
+        float spreadStep  = 0.15f;
+        float spreadStart = -((projectileCount - 1) * spreadStep) / 2f;
+        for (int i = 0; i < projectileCount; i++) {
+            float a = angle + spreadStart + i * spreadStep;
+            Projectile p = new Projectile();
+            p.projectileType  = ProjectileType.POTATO;
+            p.source          = type;
+            p.x               = player.x;
+            p.y               = player.y;
+            p.damage          = damage;
+            p.size            = size;
+            p.piercing        = piercing;
+            p.explosionRadius = explosionRadius;
+            p.setVelocity(a, projectileSpeed);
+            projectiles.add(p);
+        }
 
         resetCooldown();
         // TODO M3: onExplosion() applies knockback to all enemies in radius via GameScreen

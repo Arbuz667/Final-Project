@@ -5,6 +5,7 @@ import com.softchaos.entities.Enemy;
 import com.softchaos.entities.Player;
 import com.softchaos.entities.Projectile;
 import com.softchaos.utils.ProjectileType;
+import com.softchaos.utils.WeaponRarity;
 import com.softchaos.utils.WeaponType;
 
 /** Fires 2 bullets simultaneously toward the nearest enemy. */
@@ -16,12 +17,13 @@ public class DesertEagles extends Weapon {
         id              = "desert_eagles";
         name            = "Desert Eagles";
         type            = WeaponType.DESERT_EAGLES;
-        cooldown        = 0.6f;
-        damage          = 15f;
+        rarity          = WeaponRarity.RARE;
+        cooldown        = 1.15f;
+        damage          = 28f;
         size            = 0.25f;
         projectileCount = 2;
         piercing        = 0;
-        projectileSpeed = 16f;
+        projectileSpeed = 18f;
         explosionRadius = 0f;
     }
 
@@ -36,8 +38,9 @@ public class DesertEagles extends Weapon {
         float dy    = target.y - player.y;
         float angle = (float) Math.atan2(dy, dx);
 
-        for (int i = 0; i < 2; i++) {
-            float a = angle + (i == 0 ? -SPREAD / 2f : SPREAD / 2f);
+        float spreadTotal = (projectileCount - 1) * SPREAD;
+        for (int i = 0; i < projectileCount; i++) {
+            float a = angle - spreadTotal / 2f + i * SPREAD;
             Projectile p = new Projectile();
             p.projectileType = ProjectileType.DOUBLE_BULLET;
             p.source  = type;
@@ -45,7 +48,7 @@ public class DesertEagles extends Weapon {
             p.y       = player.y;
             p.damage  = damage;
             p.size    = size;
-            p.piercing = 0;
+            p.piercing = piercing;
             p.setVelocity(a, projectileSpeed);
             projectiles.add(p);
         }

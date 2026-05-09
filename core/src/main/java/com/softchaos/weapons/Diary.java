@@ -15,7 +15,7 @@ public class Diary extends Weapon {
         id              = "diary";
         name            = "Diary";
         type            = WeaponType.DIARY;
-        cooldown        = 1.5f;
+        cooldown        = 2.0f;
         damage          = 20f;
         size            = 0.4f;
         projectileCount = 3;
