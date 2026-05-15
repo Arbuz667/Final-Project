@@ -51,6 +51,8 @@ public class EnemySpawner {
         e.speed  = 3.5f;
         e.damage = 5f;
         e.xpDrop = 8;
+        e.chestDropChance = 0.01f;  // 1% chance to drop a gold chest on death
+        e.chestType = com.softchaos.utils.ChestType.GOLD;
 
         // TODO M2: assign AI based on EnemyConfig.aiClass
         e.ai = new ChaseAI();

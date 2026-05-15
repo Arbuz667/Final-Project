@@ -3,6 +3,7 @@ package com.softchaos.screens;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.Screen;
+import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.OrthographicCamera;
@@ -26,6 +27,7 @@ import com.softchaos.systems.UpgradeSystem;
 import com.softchaos.systems.WaveManager;
 import com.softchaos.systems.XPSystem;
 import com.softchaos.utils.Constants;
+import com.softchaos.utils.ChestType;
 import com.softchaos.utils.LocationType;
 import com.softchaos.utils.MusicType;
 import com.softchaos.utils.WeaponRarity;
@@ -216,7 +218,11 @@ public class GameScreen implements Screen,
             if (e.isDead()) {
                 xpSystem.addXP(e.xpDrop);
                 GameStateManager.getInstance().kills++;
-                // TODO M3: roll chest drop
+                // Roll chest drop using enemy's configured drop chance
+                if (e.chestDropChance > 0 && MathUtils.randomBoolean(e.chestDropChance)) {
+                    ChestType cType = e.chestType != null ? e.chestType : ChestType.GOLD;
+                    chestSystem.spawnChest(cType, e.x, e.y);
+                }
                 enemySpawner.freeEnemy(e);
                 i--;
                 continue;
@@ -312,6 +318,16 @@ public class GameScreen implements Screen,
             game.setScreen(new GameOverScreen(game));
         }
 
+        // Chest pickup — player walks over a chest to open it
+        Array<Chest> activeChests = chestSystem.getActiveChests();
+        for (int ci = activeChests.size - 1; ci >= 0; ci--) {
+            Chest c = activeChests.get(ci);
+            if (!c.open && c.hitbox.overlaps(player.hitbox)) {
+                chestSystem.openChest(c);
+                break;
+            }
+        }
+
         AudioManager.getInstance().update(delta);
         uiManager.update();
     }
@@ -341,6 +357,12 @@ public class GameScreen implements Screen,
         shapeRenderer.setColor(0.85f, 0.15f, 0.15f, 1f);
         for (Enemy e : enemies) {
             shapeRenderer.rect(e.x - 0.4f, e.y - 0.4f, 0.8f, 0.8f);
+        }
+
+        // Chests (gold squares on the ground)
+        shapeRenderer.setColor(1f, 0.78f, 0.1f, 1f);
+        for (Chest c : chestSystem.getActiveChests()) {
+            if (!c.open) shapeRenderer.rect(c.x - 0.4f, c.y - 0.4f, 0.8f, 0.8f);
         }
 
         // Enemy HP bars (world coords, small bar above each enemy)
@@ -388,8 +410,8 @@ public class GameScreen implements Screen,
     }
 
     public void showUpgradeScreen() {
-        if (player.weapons.size == 0) return;
-        Weapon w = player.weapons.first();
+        if (player.weapons.isEmpty()) return;
+        Weapon w = player.weapons.get(MathUtils.random(player.weapons.size - 1));
         game.setScreen(new UpgradeScreen(game, w, upgradeSystem, this));
     }
 
@@ -578,7 +600,14 @@ public class GameScreen implements Screen,
     }
 
     public void showChestScreen(Chest chest) {
-        // TODO M3: overlay ChestScreen
+        if (player.canAddWeapon()) {
+            game.setScreen(new ChestScreen(game, chest, player, chestSystem, this));
+        } else {
+            // Inventory full: convert chest to upgrade for a random existing weapon
+            chestSystem.freeChest(chest);
+            Weapon w = player.weapons.get(MathUtils.random(player.weapons.size - 1));
+            game.setScreen(new UpgradeScreen(game, w, upgradeSystem, this));
+        }
     }
 
     // --- WaveManager.WaveListener ---
@@ -634,4 +663,4 @@ public class GameScreen implements Screen,
         player.dispose();
         uiManager.dispose();
     }
-}яё
+}
