@@ -8,7 +8,7 @@ import com.softchaos.utils.ProjectileType;
 import com.softchaos.utils.WeaponRarity;
 import com.softchaos.utils.WeaponType;
 
-/** Very high fire rate (0.1s cooldown), 1 bullet per shot toward nearest enemy. */
+/** Very high fire rate (0.42s cooldown), 1 bullet per shot toward nearest enemy. */
 public class Minigun extends Weapon {
 
     public Minigun() {
@@ -16,7 +16,7 @@ public class Minigun extends Weapon {
         name            = "Minigun";
         type            = WeaponType.MINIGUN;
         rarity          = WeaponRarity.EPIC;
-        cooldown        = 0.58f;
+        cooldown        = 0.42f;
         damage          = 4f;
         size            = 0.2f;
         projectileCount = 1;

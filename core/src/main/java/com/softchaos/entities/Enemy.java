@@ -17,6 +17,10 @@ public class Enemy {
     public float cringeMeter; // 0–100, used by SixSeven
     public EnemyType type;
 
+    // Knockback state
+    public float knockbackVelX, knockbackVelY;
+    public float knockbackTimer;
+
     // From config
     public int xpDrop;
     public float chestDropChance;
@@ -27,8 +31,22 @@ public class Enemy {
         cringeMeter = 0f;
     }
 
+    public void applyKnockback(float forceX, float forceY, float duration) {
+        knockbackVelX = forceX;
+        knockbackVelY = forceY;
+        knockbackTimer = duration;
+    }
+
     public void update(float delta, Player player) {
-        if (ai != null) {
+        if (knockbackTimer > 0) {
+            x += knockbackVelX * delta;
+            y += knockbackVelY * delta;
+            knockbackTimer -= delta;
+            if (knockbackTimer <= 0) {
+                knockbackVelX = 0;
+                knockbackVelY = 0;
+            }
+        } else if (ai != null) {
             ai.update(this, player, delta);
         }
         hitbox.setPosition(x - hitbox.width / 2f, y - hitbox.height / 2f);

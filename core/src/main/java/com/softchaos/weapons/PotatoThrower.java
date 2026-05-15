@@ -5,6 +5,7 @@ import com.softchaos.entities.Enemy;
 import com.softchaos.entities.Player;
 import com.softchaos.entities.Projectile;
 import com.softchaos.utils.ProjectileType;
+import com.softchaos.utils.WeaponRarity;
 import com.softchaos.utils.WeaponType;
 
 /** Lobs a potato that applies knockback to all enemies in AOE on explosion. */
@@ -17,6 +18,7 @@ public class PotatoThrower extends Weapon {
         id              = "potato_thrower";
         name            = "Potato Thrower";
         type            = WeaponType.POTATO_THROWER;
+        rarity          = WeaponRarity.RARE;
         cooldown        = 1.7f;
         damage          = 30f;
         size            = 0.4f;
@@ -54,7 +56,6 @@ public class PotatoThrower extends Weapon {
         }
 
         resetCooldown();
-        // TODO M3: onExplosion() applies knockback to all enemies in radius via GameScreen
     }
 
     private Enemy findNearest(Player player, Array<Enemy> enemies) {

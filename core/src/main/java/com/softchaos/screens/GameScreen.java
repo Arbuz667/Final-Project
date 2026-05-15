@@ -35,9 +35,9 @@ import com.softchaos.weapons.WeaponSystem;
 
 /** Main gameplay screen. update() + draw() loop for all systems. */
 public class GameScreen implements Screen,
-        WaveManager.WaveListener,
-        XPSystem.XPListener,
-        ChestSystem.ChestListener {
+    WaveManager.WaveListener,
+    XPSystem.XPListener,
+    ChestSystem.ChestListener {
 
     private final SoftChaosGame game;
     private SpriteBatch batch;
@@ -244,6 +244,42 @@ public class GameScreen implements Screen,
                 p.onHit(e);
                 float dealt = hpBefore - e.hp;
                 if (dealt > 0) damageNumbers.add(new DamageNumber(e.x, e.y, dealt));
+
+                // AOE explosion: damage all enemies within explosionRadius
+                if (p.explosionRadius > 0) {
+                    float r2 = p.explosionRadius * p.explosionRadius;
+                    boolean isKnockback = p.source == com.softchaos.utils.WeaponType.POTATO_THROWER;
+                    // Also apply knockback to the directly-hit enemy
+                    if (isKnockback) {
+                        float edx = e.x - p.x, edy = e.y - p.y;
+                        float elen = (float) Math.sqrt(edx * edx + edy * edy);
+                        if (elen > 0) e.applyKnockback(
+                            (edx / elen) * com.softchaos.weapons.PotatoThrower.KNOCKBACK_FORCE,
+                            (edy / elen) * com.softchaos.weapons.PotatoThrower.KNOCKBACK_FORCE,
+                            com.softchaos.weapons.PotatoThrower.KNOCKBACK_DURATION);
+                    }
+                    for (int ai = 0; ai < enemies.size; ai++) {
+                        Enemy ae = enemies.get(ai);
+                        if (ae == e) continue;
+                        float ddx = ae.x - p.x;
+                        float ddy = ae.y - p.y;
+                        float dist2 = ddx * ddx + ddy * ddy;
+                        if (dist2 <= r2) {
+                            float hpA = ae.hp;
+                            ae.takeDamage(p.damage);
+                            float dealtA = hpA - ae.hp;
+                            if (dealtA > 0) damageNumbers.add(new DamageNumber(ae.x, ae.y, dealtA));
+                            if (isKnockback) {
+                                float dist = (float) Math.sqrt(dist2);
+                                ae.applyKnockback(
+                                    (ddx / dist) * com.softchaos.weapons.PotatoThrower.KNOCKBACK_FORCE,
+                                    (ddy / dist) * com.softchaos.weapons.PotatoThrower.KNOCKBACK_FORCE,
+                                    com.softchaos.weapons.PotatoThrower.KNOCKBACK_DURATION);
+                            }
+                        }
+                    }
+                    break;
+                }
 
                 // Bounce logic: redirect to nearest unvisited enemy
                 if (p.bouncesLeft > 0) {
@@ -460,15 +496,15 @@ public class GameScreen implements Screen,
         hudFont.draw(batch, "HP", 10f, topStripY + topStripH - 12f);
         hudFont.setColor(Color.WHITE);
         hudFont.draw(batch, String.format("%.0f / %.0f", player.hp, player.maxHp),
-                     50f, topStripY + topStripH - 12f);
+            50f, topStripY + topStripH - 12f);
 
         // Timer
         hudFontBig.getData().setScale(2.0f);
         hudFontBig.setColor(new Color(1f, 0.88f, 0.4f, 1f));
         glyphLayout.setText(hudFontBig, timerStr);
         hudFontBig.draw(batch, timerStr,
-                        (sw - glyphLayout.width) / 2f,
-                        topStripY + topStripH - 6f);
+            (sw - glyphLayout.width) / 2f,
+            topStripY + topStripH - 6f);
 
         // Kill counter
         hudFont.getData().setScale(1.3f);
@@ -598,4 +634,4 @@ public class GameScreen implements Screen,
         player.dispose();
         uiManager.dispose();
     }
-}
+}яё
