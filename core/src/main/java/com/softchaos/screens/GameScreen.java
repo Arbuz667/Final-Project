@@ -102,8 +102,8 @@ public class GameScreen implements Screen,
                       XPSystem existingXpSystem, UpgradeSystem existingUpgradeSystem) {
         this.game = game;
 
-        float worldW = Constants.SCREEN_WIDTH  / Constants.PPM;
-        float worldH = Constants.SCREEN_HEIGHT / Constants.PPM;
+        float worldW = Gdx.graphics.getWidth()  / Constants.PPM;
+        float worldH = Gdx.graphics.getHeight() / Constants.PPM;
 
         camera = new OrthographicCamera();
         camera.setToOrtho(false, worldW, worldH);
@@ -121,7 +121,7 @@ public class GameScreen implements Screen,
         backgroundTexture = new Texture(Gdx.files.internal(loc.backgroundFile()));
 
         hudCamera = new OrthographicCamera();
-        hudCamera.setToOrtho(false, Constants.SCREEN_WIDTH, Constants.SCREEN_HEIGHT);
+        hudCamera.setToOrtho(false, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
         hudFont   = new BitmapFont();
         hudFont.getData().setScale(1.4f);
         hudFontBig = new BitmapFont();
@@ -139,6 +139,8 @@ public class GameScreen implements Screen,
             player.y = worldH / 2f;
         } else {
             player = new Player();
+            player.x = worldW / 2f;
+            player.y = worldH / 2f;
             Weapon start = GameStateManager.getInstance().startingWeapon;
             player.weapons.add(start != null ? start : new Sword());
         }
@@ -340,11 +342,9 @@ public class GameScreen implements Screen,
         camera.update();
 
         // 1. Background — single full-screen PNG stretched to world size
-        float worldW = Constants.SCREEN_WIDTH  / Constants.PPM;
-        float worldH = Constants.SCREEN_HEIGHT / Constants.PPM;
         batch.setProjectionMatrix(camera.combined);
         batch.begin();
-        batch.draw(backgroundTexture, 0, 0, worldW, worldH);
+        batch.draw(backgroundTexture, 0, 0, camera.viewportWidth, camera.viewportHeight);
         batch.end();
 
         // 2. Enemies + HP bars + projectiles
@@ -403,7 +403,7 @@ public class GameScreen implements Screen,
             shapeRenderer.setProjectionMatrix(hudCamera.combined);
             shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
             shapeRenderer.setColor(0f, 0f, 0f, fadeAlpha);
-            shapeRenderer.rect(0, 0, Constants.SCREEN_WIDTH, Constants.SCREEN_HEIGHT);
+            shapeRenderer.rect(0, 0, hudCamera.viewportWidth, hudCamera.viewportHeight);
             shapeRenderer.end();
             Gdx.gl.glDisable(GL20.GL_BLEND);
         }

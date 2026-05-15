@@ -6,6 +6,7 @@ import com.badlogic.gdx.Screen;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.OrthographicCamera;
+import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.GlyphLayout;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
@@ -36,6 +37,7 @@ public class WeaponSelectScreen implements Screen {
     private BitmapFont          font;
     private BitmapFont          fontBig;
     private GlyphLayout         layout;
+    private Texture             background;
 
     private final Array<Weapon> choices = new Array<>(CHOICES);
 
@@ -61,21 +63,28 @@ public class WeaponSelectScreen implements Screen {
     public void show() {
         camera = new OrthographicCamera();
         camera.setToOrtho(false, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
-        batch   = new SpriteBatch();
-        shape   = new ShapeRenderer();
-        font    = new BitmapFont();
-        fontBig = new BitmapFont();
-        layout  = new GlyphLayout();
+        batch      = new SpriteBatch();
+        shape      = new ShapeRenderer();
+        font       = new BitmapFont();
+        fontBig    = new BitmapFont();
+        layout     = new GlyphLayout();
         font.getData().setScale(1.5f);
         fontBig.getData().setScale(2.4f);
+        background = new Texture(Gdx.files.internal("main_menu.png"));
+        background.setFilter(Texture.TextureFilter.Linear, Texture.TextureFilter.Linear);
     }
 
     @Override
     public void render(float delta) {
-        Gdx.gl.glClearColor(0.04f, 0.04f, 0.1f, 1f);
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
-
         camera.update();
+
+        // Draw menu background
+        batch.setProjectionMatrix(camera.combined);
+        batch.begin();
+        batch.draw(background, 0, 0, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
+        batch.end();
+        batch.setProjectionMatrix(camera.combined);
         int sw = Gdx.graphics.getWidth();
         int sh = Gdx.graphics.getHeight();
 
@@ -213,9 +222,10 @@ public class WeaponSelectScreen implements Screen {
 
     @Override
     public void dispose() {
-        if (batch   != null) { batch.dispose();   batch   = null; }
-        if (shape   != null) { shape.dispose();   shape   = null; }
-        if (font    != null) { font.dispose();    font    = null; }
-        if (fontBig != null) { fontBig.dispose(); fontBig = null; }
+        if (batch      != null) { batch.dispose();      batch      = null; }
+        if (shape      != null) { shape.dispose();      shape      = null; }
+        if (font       != null) { font.dispose();       font       = null; }
+        if (fontBig    != null) { fontBig.dispose();    fontBig    = null; }
+        if (background != null) { background.dispose(); background = null; }
     }
 }
