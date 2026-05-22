@@ -21,7 +21,11 @@ public class MainMenuScreen implements Screen {
     private Texture            background;
     private Texture            playNormal, playHover;
     private Texture            quitNormal, quitHover;
-    private Rectangle          playHit, quitHit;
+    private Texture            settingsBtn;
+    private Rectangle          playHit, quitHit, settingsHit;
+
+    private static final float SETTINGS_SIZE = 72f;
+    private static final float SETTINGS_PAD  = 20f;
 
     public MainMenuScreen(SoftChaosGame game) {
         this.game = game;
@@ -36,16 +40,20 @@ public class MainMenuScreen implements Screen {
 
         batch      = new SpriteBatch();
         background = load("main_menu.png");
-        playNormal = load("play_button.png");
-        playHover  = load("active_play_button.png");
-        quitNormal = load("quit_button.png");
-        quitHover  = load("active_quit_button.png");
+        playNormal  = load("play_button.png");
+        playHover   = load("active_play_button.png");
+        quitNormal  = load("quit_button.png");
+        quitHover   = load("active_quit_button.png");
+        settingsBtn = load("settings_button.png");
 
         // Hit areas — sized to the normal button display dimensions
         float bw = 320f, bh = 88f;
         float cx = w / 2f, cy = h / 2f;
-        playHit = new Rectangle(cx - bw / 2f, cy - 5f,  bw, bh);
-        quitHit = new Rectangle(cx - bw / 2f, cy - 115f, bw, bh);
+        playHit     = new Rectangle(cx - bw / 2f, cy - 5f,   bw, bh);
+        quitHit     = new Rectangle(cx - bw / 2f, cy - 115f, bw, bh);
+        settingsHit = new Rectangle(w - SETTINGS_SIZE - SETTINGS_PAD,
+                                    h - SETTINGS_SIZE - SETTINGS_PAD,
+                                    SETTINGS_SIZE, SETTINGS_SIZE);
 
         AudioManager.getInstance().playMusic(MusicType.MENU);
     }
@@ -59,9 +67,10 @@ public class MainMenuScreen implements Screen {
         float mx = Gdx.input.getX();
         float my = sh - Gdx.input.getY();   // flip Y
 
-        boolean overPlay = playHit.contains(mx, my);
-        boolean overQuit = quitHit.contains(mx, my);
-        boolean clicked  = Gdx.input.justTouched();
+        boolean overPlay     = playHit.contains(mx, my);
+        boolean overQuit     = quitHit.contains(mx, my);
+        boolean overSettings = settingsHit.contains(mx, my);
+        boolean clicked      = Gdx.input.justTouched();
 
         batch.setProjectionMatrix(camera.combined);
         batch.begin();
@@ -70,6 +79,15 @@ public class MainMenuScreen implements Screen {
         drawBtn(playNormal, playHover, overPlay, playHit);
         drawBtn(quitNormal, quitHover, overQuit, quitHit);
 
+        // Settings icon — brighter on hover
+        batch.setColor(overSettings ? 1f : 0.75f, overSettings ? 1f : 0.75f, overSettings ? 1f : 0.75f, 1f);
+        float settingsDrawSize = overSettings ? SETTINGS_SIZE * 1.1f : SETTINGS_SIZE;
+        float settingsDelta   = (settingsDrawSize - SETTINGS_SIZE) / 2f;
+        batch.draw(settingsBtn,
+            settingsHit.x - settingsDelta, settingsHit.y - settingsDelta,
+            settingsDrawSize, settingsDrawSize);
+        batch.setColor(1f, 1f, 1f, 1f);
+
         batch.end();
 
         if ((clicked && overPlay) || Gdx.input.isKeyJustPressed(Input.Keys.ENTER)) {
@@ -77,6 +95,9 @@ public class MainMenuScreen implements Screen {
         }
         if ((clicked && overQuit) || Gdx.input.isKeyJustPressed(Input.Keys.ESCAPE)) {
             Gdx.app.exit();
+        }
+        if (clicked && overSettings) {
+            game.setScreen(new SettingsScreen(game, this));
         }
 
         AudioManager.getInstance().update(delta);
@@ -121,5 +142,6 @@ public class MainMenuScreen implements Screen {
         if (playHover  != null) { playHover.dispose();  playHover  = null; }
         if (quitNormal != null) { quitNormal.dispose(); quitNormal = null; }
         if (quitHover  != null) { quitHover.dispose();  quitHover  = null; }
+        if (settingsBtn != null) { settingsBtn.dispose(); settingsBtn = null; }
     }
 }
