@@ -3,27 +3,29 @@ package com.softchaos.screens;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.Screen;
-import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.OrthographicCamera;
-import com.badlogic.gdx.graphics.g2d.BitmapFont;
-import com.badlogic.gdx.graphics.g2d.GlyphLayout;
+import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
-import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
+import com.badlogic.gdx.math.Rectangle;
 import com.softchaos.SoftChaosGame;
 import com.softchaos.managers.AudioManager;
 import com.softchaos.managers.GameStateManager;
 import com.softchaos.utils.MusicType;
 
-/** Shows run statistics after the player dies. ENTER → retry, M → main menu. */
+/** Shows run statistics after the player dies. Click / ENTER → retry, Quit / M → main menu. */
 public class GameOverScreen implements Screen {
 
+    private static final float BTN_W = 300f, BTN_H = 84f;
+
     private final SoftChaosGame game;
-    private SpriteBatch   batch;
-    private ShapeRenderer shape;
-    private BitmapFont    titleFont;
-    private BitmapFont    bodyFont;
+    private SpriteBatch        batch;
     private OrthographicCamera camera;
+
+    private Texture background;
+    private Texture retryNormal, retryHover;
+    private Texture quitNormal,  quitHover;
+    private Rectangle retryHit, quitHit;
 
     public GameOverScreen(SoftChaosGame game) {
         this.game = game;
@@ -35,87 +37,76 @@ public class GameOverScreen implements Screen {
         int h = Gdx.graphics.getHeight();
         camera = new OrthographicCamera();
         camera.setToOrtho(false, w, h);
-        batch     = new SpriteBatch();
-        shape     = new ShapeRenderer();
-        titleFont = new BitmapFont();
-        titleFont.getData().setScale(3.5f);
-        bodyFont  = new BitmapFont();
-        bodyFont.getData().setScale(1.8f);
+
+        batch      = new SpriteBatch();
+
+        background  = load("death menu.png");
+        retryNormal = load("retry button.png");
+        retryHover  = load("retry button light.png");
+        quitNormal  = load("death menu quit.png");
+        quitHover   = load("death menu quit light.png");
+
+        float cx = w / 2f, cy = h / 2f;
+        retryHit = new Rectangle(cx - BTN_W / 2f, cy - 140f, BTN_W, BTN_H);
+        quitHit  = new Rectangle(cx - BTN_W / 2f, cy - 240f, BTN_W, BTN_H);
+
         AudioManager.getInstance().playMusic(MusicType.GAME_OVER);
     }
 
     @Override
     public void render(float delta) {
-        Gdx.gl.glClearColor(0.04f, 0.02f, 0.02f, 1f);
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
 
-        GameStateManager gsm = GameStateManager.getInstance();
-        int   sw  = Gdx.graphics.getWidth();
-        int   sh  = Gdx.graphics.getHeight();
-        float cx  = sw / 2f;
-        float cy  = sh / 2f;
+        int   sw = Gdx.graphics.getWidth();
+        int   sh = Gdx.graphics.getHeight();
+        float mx = Gdx.input.getX();
+        float my = sh - Gdx.input.getY();
 
-        int totalSecs = (int) gsm.sessionTime;
-        String time   = String.format("%02d:%02d", totalSecs / 60, totalSecs % 60);
-
-        Gdx.gl.glEnable(GL20.GL_BLEND);
-        Gdx.gl.glBlendFunc(GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA);
-        shape.setProjectionMatrix(camera.combined);
-        shape.begin(ShapeRenderer.ShapeType.Filled);
-        // Centre panel
-        shape.setColor(0.08f, 0.04f, 0.04f, 0.95f);
-        shape.rect(cx - 280f, cy - 160f, 560f, 360f);
-        // Red top accent
-        shape.setColor(0.75f, 0.1f, 0.1f, 1f);
-        shape.rect(cx - 280f, cy + 200f, 560f, 8f);
-        shape.end();
-        Gdx.gl.glDisable(GL20.GL_BLEND);
+        boolean overRetry = retryHit.contains(mx, my);
+        boolean overQuit  = quitHit.contains(mx, my);
+        boolean clicked   = Gdx.input.justTouched();
 
         batch.setProjectionMatrix(camera.combined);
         batch.begin();
 
-        // Title
-        titleFont.setColor(new Color(0.9f, 0.15f, 0.15f, 1f));
-        GlyphLayout gl = new GlyphLayout(titleFont, "YOU DIED");
-        titleFont.draw(batch, "YOU DIED", cx - gl.width / 2f, cy + 190f);
-
-        // Stats
-        GlyphLayout gl2 = new GlyphLayout();
-        bodyFont.setColor(new Color(0.75f, 0.75f, 0.75f, 1f));
-
-        String[] lines = {
-            "Time survived:  " + time,
-            "Enemies killed: " + gsm.kills,
-            "Level reached:  " + gsm.playerLevel
-        };
-        float lineH = 44f;
-        float startY = cy + 110f;
-        for (int i = 0; i < lines.length; i++) {
-            gl2.setText(bodyFont, lines[i]);
-            bodyFont.draw(batch, lines[i], cx - gl2.width / 2f, startY - i * lineH);
-        }
+        // Background
+        batch.draw(background, 0, 0, sw, sh);
 
         // Buttons
-        bodyFont.setColor(Color.WHITE);
-        gl2.setText(bodyFont, "[ ENTER ]  Play Again");
-        bodyFont.draw(batch, "[ ENTER ]  Play Again", cx - gl2.width / 2f, cy - 80f);
-
-        bodyFont.setColor(new Color(0.6f, 0.6f, 0.6f, 1f));
-        gl2.setText(bodyFont, "[ M ]  Main Menu");
-        bodyFont.draw(batch, "[ M ]  Main Menu", cx - gl2.width / 2f, cy - 128f);
+        drawBtn(retryNormal, retryHover, overRetry, retryHit);
+        drawBtn(quitNormal,  quitHover,  overQuit,  quitHit);
 
         batch.end();
 
         AudioManager.getInstance().update(delta);
 
-        if (Gdx.input.isKeyJustPressed(Input.Keys.ENTER)) {
+        if ((clicked && overRetry) || Gdx.input.isKeyJustPressed(Input.Keys.ENTER)) {
             GameStateManager.getInstance().reset();
             game.setScreen(new CharacterSelectScreen(game));
         }
-        if (Gdx.input.isKeyJustPressed(Input.Keys.M)) {
+        if ((clicked && overQuit) || Gdx.input.isKeyJustPressed(Input.Keys.M)) {
             GameStateManager.getInstance().reset();
             game.setScreen(new MainMenuScreen(game));
         }
+    }
+
+    private void drawBtn(Texture normal, Texture hover, boolean isHover, Rectangle hit) {
+        if (!isHover) {
+            batch.draw(normal, hit.x, hit.y, hit.width, hit.height);
+        } else {
+            // Keep same width; hover texture is taller due to glow — scale height proportionally
+            float drawH = hit.height * ((float) hover.getHeight() / normal.getHeight());
+            batch.draw(hover,
+                hit.x,
+                hit.y + hit.height / 2f - drawH / 2f,
+                hit.width, drawH);
+        }
+    }
+
+    private Texture load(String path) {
+        Texture t = new Texture(Gdx.files.internal(path));
+        t.setFilter(Texture.TextureFilter.Linear, Texture.TextureFilter.Linear);
+        return t;
     }
 
     @Override public void resize(int width, int height) {}
@@ -125,10 +116,12 @@ public class GameOverScreen implements Screen {
 
     @Override
     public void dispose() {
-        if (batch     != null) { batch.dispose();     batch     = null; }
-        if (shape     != null) { shape.dispose();     shape     = null; }
-        if (titleFont != null) { titleFont.dispose(); titleFont = null; }
-        if (bodyFont  != null) { bodyFont.dispose();  bodyFont  = null; }
+        if (batch       != null) { batch.dispose();       batch       = null; }
+        if (background  != null) { background.dispose();  background  = null; }
+        if (retryNormal != null) { retryNormal.dispose(); retryNormal = null; }
+        if (retryHover  != null) { retryHover.dispose();  retryHover  = null; }
+        if (quitNormal  != null) { quitNormal.dispose();  quitNormal  = null; }
+        if (quitHover   != null) { quitHover.dispose();   quitHover   = null; }
     }
 }
 
