@@ -108,11 +108,12 @@ public class AudioManager {
     private String getMusicPath(MusicType type) {
         switch (type) {
             case MENU:      return "audio/Radiohead - All I Need.mp3";
-            case GAME_OVER: return "audio/Seryoga_Pirat_-_Where_is_my_mind_(SkySound.cc).mp3";
+            case GAME_OVER: return "audio/Seryoga_Pirat_-Where_is_my_mind(SkySound.cc).mp3";
             case FOREST:    return "audio/Terraria Music - Underground.mp3";
             case OCEAN:     return "audio/Grass Skirt Chase (Extended Mix) - SpongeBob SquarePants.mp3";
             case SPACE:     return "audio/Radiohead - Creep.mp3";
             case WIN:       return "audio/Favored Nations - The Set Up.mp3";
+            case BOSS:      return "audio/the_matrix_09 My Own Summer (Shove It).mp3";
             default:        return null;
         }
     }

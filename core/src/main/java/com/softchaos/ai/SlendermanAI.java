@@ -31,8 +31,24 @@ public class SlendermanAI extends BossAI {
     }
 
     @Override
+    protected void handleChase(Boss self, Player player, float delta) {
+        super.handleChase(self, player, delta);
+        float dx = player.x - self.x;
+        float dy = player.y - self.y;
+        if ((float) Math.sqrt(dx * dx + dy * dy) < 1.5f && stateTimer > 0.8f) {
+            transitionTo(State.ATTACK);
+            stateTimer = 0f;
+        }
+    }
+
+    @Override
     protected void handleAttack(Boss self, Player player, float delta) {
-        // TODO M3: Slenderman attack logic (close-range damage)
+        // Close-range burst damage after teleport
+        float dx = player.x - self.x;
+        float dy = player.y - self.y;
+        if ((float) Math.sqrt(dx * dx + dy * dy) < 2f) {
+            player.takeDamage(30f);
+        }
         transitionTo(State.CHASE);
     }
 }

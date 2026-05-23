@@ -45,7 +45,13 @@ public abstract class BossAI implements EnemyAI {
     }
 
     protected void handleChase(Boss self, Player player, float delta) {
-        // TODO M3: move toward player
+        float dx = player.x - self.x;
+        float dy = player.y - self.y;
+        float len = (float) Math.sqrt(dx * dx + dy * dy);
+        if (len > 0) {
+            self.x += (dx / len) * self.speed * delta;
+            self.y += (dy / len) * self.speed * delta;
+        }
     }
 
     protected abstract void handleAttack(Boss self, Player player, float delta);

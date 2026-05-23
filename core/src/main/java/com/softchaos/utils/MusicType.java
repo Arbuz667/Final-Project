@@ -6,5 +6,6 @@ public enum MusicType {
     OCEAN,
     SPACE,
     GAME_OVER,  // Where Is My Mind
-    WIN
+    WIN,
+    BOSS        // My Own Summer (Shove It)
 }

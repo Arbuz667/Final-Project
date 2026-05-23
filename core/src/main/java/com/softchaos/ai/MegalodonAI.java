@@ -19,7 +19,6 @@ public class MegalodonAI extends BossAI {
 
     @Override
     protected void handleChase(Boss self, Player player, float delta) {
-        // TODO M3: move toward player
         float dx = player.x - self.x;
         float dy = player.y - self.y;
         float len = (float) Math.sqrt(dx * dx + dy * dy);
@@ -27,13 +26,11 @@ public class MegalodonAI extends BossAI {
             self.x += (dx / len) * self.speed * delta;
             self.y += (dy / len) * self.speed * delta;
         }
-        self.hitbox.setPosition(self.x, self.y);
 
         if (self.phase >= 2) {
             sharkTimer += delta;
             if (sharkTimer >= SHARK_SPAWN_INTERVAL) {
-                // TODO M4: EnemySpawner.spawnSharks(self.x, self.y)
-                sharkTimer = 0f;
+                sharkTimer = 0f; // TODO: spawn shark minions
             }
         }
         if (self.phase >= 3) {
@@ -43,11 +40,21 @@ public class MegalodonAI extends BossAI {
                 aoeTimer = 0f;
             }
         }
+        // Melee-range attack trigger (all phases)
+        if (len < 1.5f && stateTimer > 1.5f) {
+            transitionTo(State.ATTACK);
+            stateTimer = 0f;
+        }
     }
 
     @Override
     protected void handleAttack(Boss self, Player player, float delta) {
-        // TODO M4: AOE explosion around Megalodon
+        // AOE burst — damages player if within 4 world units
+        float dx = player.x - self.x;
+        float dy = player.y - self.y;
+        if ((float) Math.sqrt(dx * dx + dy * dy) <= 4f) {
+            player.takeDamage(35f);
+        }
         transitionTo(State.CHASE);
     }
 }

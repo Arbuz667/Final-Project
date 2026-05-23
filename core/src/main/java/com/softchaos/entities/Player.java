@@ -55,10 +55,10 @@ public class Player {
             y += moveY * speed * delta;
         }
 
-        // Clamp to screen bounds
+        // Clamp to actual screen bounds (fullscreen resolution may differ from Constants)
         float half   = hitbox.width / 2f;
-        float worldW = Constants.SCREEN_WIDTH  / Constants.PPM;
-        float worldH = Constants.SCREEN_HEIGHT / Constants.PPM;
+        float worldW = Gdx.graphics.getWidth()  / Constants.PPM;
+        float worldH = Gdx.graphics.getHeight() / Constants.PPM;
         x = Math.max(half, Math.min(worldW - half, x));
         y = Math.max(half, Math.min(worldH - half, y));
 

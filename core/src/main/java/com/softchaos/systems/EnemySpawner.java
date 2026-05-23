@@ -1,9 +1,15 @@
 package com.softchaos.systems;
 
+import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.math.MathUtils;
+import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.Pool;
 import com.softchaos.ai.ChaseAI;
+import com.softchaos.ai.MegalodonAI;
+import com.softchaos.ai.PickleRickAI;
+import com.softchaos.ai.SlendermanAI;
+import com.softchaos.entities.Boss;
 import com.softchaos.entities.Enemy;
 import com.softchaos.utils.EnemyType;
 import com.softchaos.utils.LocationType;
@@ -46,7 +52,7 @@ public class EnemySpawner {
         Enemy e = enemyPool.obtain();
         e.type = type;
         // TODO M2: load stats from EnemyConfig via AssetLoader
-        e.maxHp  = 30f;
+        e.maxHp  = 100f;
         e.hp     = e.maxHp;
         e.speed  = 3.5f;
         e.damage = 5f;
@@ -66,9 +72,8 @@ public class EnemySpawner {
 
     /** Returns a random position just outside the visible screen edges. */
     public float[] getSpawnPoint() {
-        // TODO M2: use actual camera/viewport bounds
-        float screenW = com.softchaos.utils.Constants.SCREEN_WIDTH  / com.softchaos.utils.Constants.PPM;
-        float screenH = com.softchaos.utils.Constants.SCREEN_HEIGHT / com.softchaos.utils.Constants.PPM;
+        float screenW = Gdx.graphics.getWidth()  / com.softchaos.utils.Constants.PPM;
+        float screenH = Gdx.graphics.getHeight() / com.softchaos.utils.Constants.PPM;
         int side = MathUtils.random(3);
         float margin = 1.5f;
         switch (side) {
@@ -97,6 +102,57 @@ public class EnemySpawner {
 
     public void freeEnemy(Enemy e) {
         activeEnemies.removeValue(e, true);
-        enemyPool.free(e);
+        if (!(e instanceof Boss)) {
+            enemyPool.free(e);
+        }
+    }
+
+    /** Removes all regular enemies from the field (called when boss phase begins). */
+    public void clearNonBossEnemies() {
+        for (int i = activeEnemies.size - 1; i >= 0; i--) {
+            Enemy e = activeEnemies.get(i);
+            if (!(e instanceof Boss)) {
+                enemyPool.free(e);
+                activeEnemies.removeIndex(i);
+            }
+        }
+    }
+
+    /**
+     * Spawns a random boss (Megalodon / PickleRick / Slenderman) at the world centre.
+     * Phase thresholds: phase 2 at 66% HP, phase 3 at 33% HP.
+     */
+    public Boss spawnBoss(float worldW, float worldH) {
+        Boss boss = new Boss();
+        int roll = MathUtils.random(2);
+        switch (roll) {
+            case 0:
+                boss.ai     = new MegalodonAI();
+                boss.maxHp  = 750f;
+                boss.speed  = 3f;
+                boss.damage = 15f;
+                break;
+            case 1:
+                boss.ai     = new PickleRickAI();
+                boss.maxHp  = 600f;
+                boss.speed  = 4.5f;
+                boss.damage = 10f;
+                break;
+            default:
+                boss.ai     = new SlendermanAI();
+                boss.maxHp  = 550f;
+                boss.speed  = 2f;
+                boss.damage = 20f;
+                break;
+        }
+        boss.hp              = boss.maxHp;
+        boss.xpDrop          = 200;
+        boss.chestDropChance = 0f;
+        boss.hitbox          = new Rectangle(0, 0, 1.5f, 1.5f);
+        boss.x = worldW / 2f;
+        boss.y = worldH / 2f;
+        boss.hitbox.setPosition(boss.x - 0.75f, boss.y - 0.75f);
+        activeEnemies.add(boss);
+        return boss;
     }
 }

@@ -14,6 +14,7 @@ import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.utils.Array;
 import com.softchaos.SoftChaosGame;
+import com.softchaos.entities.Boss;
 import com.softchaos.entities.Chest;
 import com.softchaos.entities.Enemy;
 import com.softchaos.entities.Player;
@@ -220,6 +221,12 @@ public class GameScreen implements Screen,
             if (e.isDead()) {
                 xpSystem.addXP(e.xpDrop);
                 GameStateManager.getInstance().kills++;
+                if (e instanceof Boss) {
+                    waveManager.onBossKilled();
+                    enemySpawner.freeEnemy(e);
+                    i--;
+                    continue;
+                }
                 // Roll chest drop using enemy's configured drop chance
                 if (e.chestDropChance > 0 && MathUtils.randomBoolean(e.chestDropChance)) {
                     ChestType cType = e.chestType != null ? e.chestType : ChestType.GOLD;
@@ -353,10 +360,15 @@ public class GameScreen implements Screen,
         shapeRenderer.setProjectionMatrix(camera.combined);
         shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
 
-        // Enemy bodies
-        shapeRenderer.setColor(0.85f, 0.15f, 0.15f, 1f);
+        // Enemy bodies (boss = orange 1.5×1.5, regular = red 0.8×0.8)
         for (Enemy e : enemies) {
-            shapeRenderer.rect(e.x - 0.4f, e.y - 0.4f, 0.8f, 0.8f);
+            if (e instanceof Boss) {
+                shapeRenderer.setColor(1f, 0.45f, 0f, 1f);
+                shapeRenderer.rect(e.x - 0.75f, e.y - 0.75f, 1.5f, 1.5f);
+            } else {
+                shapeRenderer.setColor(0.85f, 0.15f, 0.15f, 1f);
+                shapeRenderer.rect(e.x - 0.4f, e.y - 0.4f, 0.8f, 0.8f);
+            }
         }
 
         // Chests (gold squares on the ground)
@@ -365,12 +377,13 @@ public class GameScreen implements Screen,
             if (!c.open) shapeRenderer.rect(c.x - 0.4f, c.y - 0.4f, 0.8f, 0.8f);
         }
 
-        // Enemy HP bars (world coords, small bar above each enemy)
-        float hpBarW = 0.8f, hpBarHt = 0.07f;
+        // Enemy HP bars — boss gets a wider, taller bar
         for (Enemy e : enemies) {
-            float frac = Math.max(0, e.hp / e.maxHp);
-            float bx   = e.x - hpBarW / 2f;
-            float by   = e.y + 0.52f;
+            float frac    = Math.max(0, e.hp / e.maxHp);
+            float hpBarW  = (e instanceof Boss) ? 2f    : 0.8f;
+            float hpBarHt = (e instanceof Boss) ? 0.12f : 0.07f;
+            float bx      = e.x - hpBarW / 2f;
+            float by      = (e instanceof Boss) ? e.y + 0.85f : e.y + 0.52f;
             shapeRenderer.setColor(0.25f, 0f, 0f, 0.9f);
             shapeRenderer.rect(bx, by, hpBarW, hpBarHt);
             shapeRenderer.setColor(0.9f, 0.12f, 0.12f, 1f);
@@ -611,11 +624,8 @@ public class GameScreen implements Screen,
     }
 
     // --- WaveManager.WaveListener ---
-    @Override public void onBossKilled()  { game.setScreen(new WinScreen(game)); }
-
-    @Override
-    public void onWaveEnd() {
-        // Start fade-to-black; transition fires once fully black
+    @Override public void onBossKilled() {
+        // Fade to black, then advance to the next location (or WinScreen if last)
         fadingOut = true;
         pendingTransition = () -> {
             boolean advanced = GameStateManager.getInstance().advanceLocation();
@@ -625,6 +635,14 @@ public class GameScreen implements Screen,
                 game.setScreen(new WinScreen(game));
             }
         };
+    }
+
+    @Override
+    public void onWaveEnd() {
+        // Wave timer hit zero — clear regular enemies, spawn the location boss, play boss music
+        enemySpawner.clearNonBossEnemies();
+        enemySpawner.spawnBoss(camera.viewportWidth, camera.viewportHeight);
+        AudioManager.getInstance().playMusic(MusicType.BOSS);
     }
 
     // --- XPSystem.XPListener ---

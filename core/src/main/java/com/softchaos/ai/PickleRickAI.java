@@ -15,7 +15,6 @@ public class PickleRickAI extends BossAI {
 
     @Override
     protected void handleChase(Boss self, Player player, float delta) {
-        // TODO M3: move toward player
         float dx = player.x - self.x;
         float dy = player.y - self.y;
         float len = (float) Math.sqrt(dx * dx + dy * dy);
@@ -23,20 +22,27 @@ public class PickleRickAI extends BossAI {
             self.x += (dx / len) * self.speed * delta;
             self.y += (dy / len) * self.speed * delta;
         }
-        self.hitbox.setPosition(self.x, self.y);
 
         if (self.phase >= 2) {
             minionTimer += delta;
             if (minionTimer >= MINION_SPAWN_INTERVAL) {
-                // TODO M3: EnemySpawner.spawnMinions(self.x, self.y)
-                minionTimer = 0f;
+                minionTimer = 0f; // TODO: spawn minion enemies
             }
+        }
+        // Trigger melee attack when within range
+        if (len < 1.5f && stateTimer > 1f) {
+            transitionTo(State.ATTACK);
+            stateTimer = 0f;
         }
     }
 
     @Override
     protected void handleAttack(Boss self, Player player, float delta) {
-        // TODO M3: melee attack
+        float dx = player.x - self.x;
+        float dy = player.y - self.y;
+        if ((float) Math.sqrt(dx * dx + dy * dy) < 2f) {
+            player.takeDamage(25f);
+        }
         transitionTo(State.CHASE);
     }
 }

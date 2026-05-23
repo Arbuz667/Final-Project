@@ -14,6 +14,7 @@ public class WaveManager {
     private float waveTimer;        // counts down from wave duration
     private float totalTime;        // total elapsed session time
     private boolean endless;
+    private boolean bossPhase;      // true while boss is alive (no regular spawns)
     private boolean bossKilled;
     private boolean waveActive;
 
@@ -52,14 +53,15 @@ public class WaveManager {
         if (!waveActive) return;
 
         totalTime += delta;
-        enemySpawner.update(delta, totalTime);
-
-        checkRareEvent();
+        if (!bossPhase) {
+            enemySpawner.update(delta, totalTime);
+            checkRareEvent();
+        }
 
         if (!endless) {
             waveTimer -= delta;
             if (waveTimer <= 0) {
-                startEndless();
+                startBossPhase();
             }
         }
     }
@@ -70,9 +72,10 @@ public class WaveManager {
         }
     }
 
-    /** Switches to endless mode (no more countdown, enemies keep spawning). */
-    public void startEndless() {
-        endless = true;
+    /** Timer reached zero — stop regular spawning and signal GameScreen to spawn the boss. */
+    private void startBossPhase() {
+        endless   = true;
+        bossPhase = true;
         if (listener != null) listener.onWaveEnd();
     }
 
