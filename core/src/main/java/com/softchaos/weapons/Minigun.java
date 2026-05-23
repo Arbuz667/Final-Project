@@ -17,7 +17,7 @@ public class Minigun extends Weapon {
         type            = WeaponType.MINIGUN;
         rarity          = WeaponRarity.EPIC;
         cooldown        = 0.42f;
-        damage          = 4f;
+        damage          = 10f;
         size            = 0.2f;
         projectileCount = 1;
         piercing        = 0;

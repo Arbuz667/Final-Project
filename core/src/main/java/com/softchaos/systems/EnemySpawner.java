@@ -9,8 +9,11 @@ import com.softchaos.ai.ChaseAI;
 import com.softchaos.ai.MegalodonAI;
 import com.softchaos.ai.PickleRickAI;
 import com.softchaos.ai.SlendermanAI;
+import com.softchaos.ai.SwarmAI;
+import com.softchaos.ai.TankAI;
 import com.softchaos.entities.Boss;
 import com.softchaos.entities.Enemy;
+import com.softchaos.utils.ChestType;
 import com.softchaos.utils.EnemyType;
 import com.softchaos.utils.LocationType;
 
@@ -51,23 +54,62 @@ public class EnemySpawner {
     public void spawnEnemy(EnemyType type) {
         Enemy e = enemyPool.obtain();
         e.type = type;
-        // TODO M2: load stats from EnemyConfig via AssetLoader
-        e.maxHp  = 100f;
-        e.hp     = e.maxHp;
-        e.speed  = 3.5f;
-        e.damage = 5f;
-        e.xpDrop = 8;
-        e.chestDropChance = 0.01f;  // 1% chance to drop a gold chest on death
-        e.chestType = com.softchaos.utils.ChestType.GOLD;
-
-        // TODO M2: assign AI based on EnemyConfig.aiClass
-        e.ai = new ChaseAI();
-
+        configureEnemy(e, type);
         float[] spawn = getSpawnPoint();
         e.x = spawn[0];
         e.y = spawn[1];
         e.hitbox.setPosition(e.x, e.y);
         activeEnemies.add(e);
+    }
+
+    /** Spawns a minion of the given type at a random offset from the boss position. */
+    public void spawnMinionAt(EnemyType type, float bossX, float bossY) {
+        Enemy e = enemyPool.obtain();
+        e.type = type;
+        configureEnemy(e, type);
+        e.x = bossX + MathUtils.random(-2f, 2f);
+        e.y = bossY + MathUtils.random(-2f, 2f);
+        e.hitbox.setPosition(e.x, e.y);
+        activeEnemies.add(e);
+    }
+
+    private void configureEnemy(Enemy e, EnemyType type) {
+        switch (type) {
+            // ── FOREST ──────────────────────────────────────────────────────
+            case ALIEN:
+                e.maxHp  = 120f;  e.speed = 4.0f; e.damage = 4f;  e.xpDrop = 8;
+                e.ai = new ChaseAI();
+                break;
+            case RABBID:
+                e.maxHp  = 80f;  e.speed = 5.5f; e.damage = 3f;  e.xpDrop = 6;
+                e.ai = new SwarmAI();
+                break;
+            // ── OCEAN ────────────────────────────────────────────────────────
+            case SHARK:
+                e.maxHp  = 180f; e.speed = 2.5f; e.damage = 10f; e.xpDrop = 15;
+                e.ai = new TankAI();
+                break;
+            case JELLYFISH:
+                e.maxHp  = 70f;  e.speed = 2.0f; e.damage = 7f;  e.xpDrop = 10;
+                e.ai = new ChaseAI();
+                break;
+            // ── SPACE ─────────────────────────────────────────────────────────
+            case ROBOT:
+                e.maxHp  = 150f; e.speed = 3.5f; e.damage = 7f;  e.xpDrop = 12;
+                e.ai = new ChaseAI();
+                break;
+            case ZOMBIE:
+                e.maxHp  = 200f; e.speed = 1.5f; e.damage = 14f; e.xpDrop = 18;
+                e.ai = new TankAI();
+                break;
+            default:
+                e.maxHp  = 100f; e.speed = 3.5f; e.damage = 5f;  e.xpDrop = 8;
+                e.ai = new ChaseAI();
+                break;
+        }
+        e.hp              = e.maxHp;
+        e.chestDropChance = 0.01f;
+        e.chestType       = ChestType.GOLD;
     }
 
     /** Returns a random position just outside the visible screen edges. */
@@ -90,12 +132,14 @@ public class EnemySpawner {
     }
 
     private EnemyType getEnemyTypeForLocation() {
-        // TODO M3: choose type based on location + wave progression
         if (location == null) return EnemyType.ALIEN;
         switch (location) {
-            case FOREST: return EnemyType.ALIEN;
-            case OCEAN:  return EnemyType.SHARK;
-            case SPACE:  return EnemyType.ROBOT;
+            // 40% Alien (fast chaser) + 60% Rabbid (swarm)
+            case FOREST: return MathUtils.randomBoolean(0.4f) ? EnemyType.ALIEN   : EnemyType.RABBID;
+            // 55% Shark (tank) + 45% Jellyfish (slow chaser)
+            case OCEAN:  return MathUtils.randomBoolean(0.55f) ? EnemyType.SHARK  : EnemyType.JELLYFISH;
+            // 60% Robot (medium chaser) + 40% Zombie (slow tank)
+            case SPACE:  return MathUtils.randomBoolean(0.6f) ? EnemyType.ROBOT   : EnemyType.ZOMBIE;
             default:     return EnemyType.ALIEN;
         }
     }
@@ -124,23 +168,22 @@ public class EnemySpawner {
      */
     public Boss spawnBoss(float worldW, float worldH) {
         Boss boss = new Boss();
-        int roll = MathUtils.random(2);
-        switch (roll) {
-            case 0:
+        switch (location) {
+            case OCEAN:
                 boss.ai     = new MegalodonAI();
-                boss.maxHp  = 750f;
+                boss.maxHp  = 10000f;
                 boss.speed  = 3f;
                 boss.damage = 15f;
                 break;
-            case 1:
+            case SPACE:
                 boss.ai     = new PickleRickAI();
-                boss.maxHp  = 600f;
+                boss.maxHp  = 13500f;
                 boss.speed  = 4.5f;
                 boss.damage = 10f;
                 break;
-            default:
+            default: // FOREST
                 boss.ai     = new SlendermanAI();
-                boss.maxHp  = 550f;
+                boss.maxHp  = 8500f;
                 boss.speed  = 2f;
                 boss.damage = 20f;
                 break;

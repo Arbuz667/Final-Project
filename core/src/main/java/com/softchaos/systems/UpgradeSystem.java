@@ -1,5 +1,6 @@
 package com.softchaos.systems;
 
+import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.ObjectIntMap;
 import com.softchaos.config.UpgradeConfig;
@@ -62,9 +63,48 @@ public class UpgradeSystem {
         }
         // If everything is maxed, allow all (edge case)
         if (pool.isEmpty()) pool = buildFallbackUpgrades(weapon);
-        pool.shuffle();
-        if (pool.size > CHOICES) pool.removeRange(CHOICES, pool.size - 1);
-        return pool;
+
+        // Pick CHOICES upgrades using weighted rarity:
+        // Common=66%, Rare=25%, Epic=8%, Legendary=1%
+        Array<UpgradeConfig> result = new Array<>();
+        Array<UpgradeConfig> remaining = new Array<>(pool);
+        for (int i = 0; i < CHOICES && !remaining.isEmpty(); i++) {
+            UpgradeConfig picked = weightedPick(remaining);
+            result.add(picked);
+            remaining.removeValue(picked, true);
+        }
+        return result;
+    }
+
+    /**
+     * Picks one upgrade from the pool using rarity weights.
+     * Common=66, Rare=25, Epic=8, Legendary=1 (out of 100).
+     * Falls back to uniform random if all candidates have null rarity.
+     */
+    private UpgradeConfig weightedPick(Array<UpgradeConfig> pool) {
+        // Build cumulative weight list
+        float[] weights = new float[pool.size];
+        float total = 0f;
+        for (int i = 0; i < pool.size; i++) {
+            total += rarityWeight(pool.get(i).rarity);
+            weights[i] = total;
+        }
+        float roll = MathUtils.random(0f, total);
+        for (int i = 0; i < pool.size; i++) {
+            if (roll <= weights[i]) return pool.get(i);
+        }
+        return pool.peek(); // fallback
+    }
+
+    /** Weight for each rarity tier (higher = more likely). */
+    private float rarityWeight(WeaponRarity rarity) {
+        if (rarity == null) return 66f;
+        switch (rarity) {
+            case LEGENDARY: return 1f;
+            case EPIC:      return 8f;
+            case RARE:      return 25f;
+            default:        return 66f; // COMMON
+        }
     }
 
     private Array<UpgradeConfig> getUpgradesForWeapon(Weapon weapon) {

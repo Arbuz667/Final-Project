@@ -9,7 +9,7 @@ import com.softchaos.utils.ProjectileType;
 import com.softchaos.utils.WeaponRarity;
 import com.softchaos.utils.WeaponType;
 
-/** Fires 3 shurikens that bounce between up to 3 enemies. */
+/** Fires a shuriken that bounces between up to 3 enemies. */
 public class Shurikens extends Weapon {
 
     public static final int MAX_BOUNCES = 3;
@@ -20,9 +20,9 @@ public class Shurikens extends Weapon {
         type            = WeaponType.SHURIKENS;
         rarity          = WeaponRarity.RARE;
         cooldown        = 1.3f;
-        damage          = 20f;
+        damage          = 30f;
         size            = 0.25f;
-        projectileCount = 3;
+        projectileCount = 1;
         piercing        = -1;   // bounce logic controls lifetime
         projectileSpeed = 12f;
         explosionRadius = 0f;

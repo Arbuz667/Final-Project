@@ -16,6 +16,7 @@ import com.softchaos.SoftChaosGame;
 import com.softchaos.managers.GameStateManager;
 import com.softchaos.utils.WeaponRarity;
 import com.softchaos.weapons.Bow;
+import com.softchaos.weapons.Diary;
 import com.softchaos.weapons.DesertEagles;
 import com.softchaos.weapons.Minigun;
 import com.softchaos.weapons.Shurikens;
@@ -50,6 +51,7 @@ public class WeaponSelectScreen implements Screen {
         Array<Weapon> pool = new Array<>();
         pool.add(new Sword());
         pool.add(new Bow());
+        pool.add(new Diary());
         pool.add(new DesertEagles());
         pool.add(new Shurikens());
         pool.add(new Minigun());
@@ -194,6 +196,7 @@ public class WeaponSelectScreen implements Screen {
             case "iron_bow":      return "Ranged. 1 fast arrow.";
             case "desert_eagles": return "Ranged. 2 bullets, spread.";
             case "shurikens":     return "Ranged. 3 projectiles/shot.";
+            case "diary":         return "Magic. Slow fireball with AOE.";
             case "minigun":       return "Rapid fire. Low damage.";
             default:              return "";
         }

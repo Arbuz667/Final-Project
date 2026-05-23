@@ -17,6 +17,7 @@ import com.softchaos.entities.Player;
 import com.softchaos.systems.ChestSystem;
 import com.softchaos.utils.WeaponRarity;
 import com.softchaos.weapons.Bow;
+import com.softchaos.weapons.Diary;
 import com.softchaos.weapons.DesertEagles;
 import com.softchaos.weapons.Minigun;
 import com.softchaos.weapons.NuclearBazooka;
@@ -65,6 +66,7 @@ public class ChestScreen implements Screen {
         Array<Weapon> pool = new Array<>();
         pool.add(new Sword());
         pool.add(new Bow());
+        pool.add(new Diary());
         pool.add(new DesertEagles());
         pool.add(new Shurikens());
         pool.add(new Minigun());

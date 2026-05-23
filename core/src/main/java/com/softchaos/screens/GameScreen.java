@@ -13,6 +13,8 @@ import com.badlogic.gdx.graphics.g2d.GlyphLayout;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.utils.Array;
+import com.softchaos.ai.MegalodonAI;
+import com.softchaos.ai.PickleRickAI;
 import com.softchaos.SoftChaosGame;
 import com.softchaos.entities.Boss;
 import com.softchaos.entities.Chest;
@@ -29,8 +31,10 @@ import com.softchaos.systems.WaveManager;
 import com.softchaos.systems.XPSystem;
 import com.softchaos.utils.Constants;
 import com.softchaos.utils.ChestType;
+import com.softchaos.utils.EnemyType;
 import com.softchaos.utils.LocationType;
 import com.softchaos.utils.MusicType;
+import com.softchaos.utils.ProjectileType;
 import com.softchaos.utils.WeaponRarity;
 import com.softchaos.weapons.Sword;
 import com.softchaos.weapons.Weapon;
@@ -251,10 +255,11 @@ public class GameScreen implements Screen,
             // Collision with enemies
             for (int ei = 0; ei < enemies.size; ei++) {
                 Enemy e = enemies.get(ei);
-                // Skip already-visited enemies for bouncing projectiles
-                if (p.bouncesLeft > 0 && p.visitedEnemies.contains(e, true)) continue;
+                // Skip enemies already hit by this projectile in its lifetime
+                if (p.visitedEnemies.contains(e, true)) continue;
                 if (!p.hitbox.overlaps(e.hitbox)) continue;
 
+                p.visitedEnemies.add(e);
                 float hpBefore = e.hp;
                 p.onHit(e);
                 float dealt = hpBefore - e.hp;
@@ -360,14 +365,16 @@ public class GameScreen implements Screen,
         shapeRenderer.setProjectionMatrix(camera.combined);
         shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
 
-        // Enemy bodies (boss = orange 1.5×1.5, regular = red 0.8×0.8)
+        // Enemy bodies — each type has a distinct colour and size
         for (Enemy e : enemies) {
             if (e instanceof Boss) {
-                shapeRenderer.setColor(1f, 0.45f, 0f, 1f);
+                shapeRenderer.setColor(1f, 0.45f, 0f, 1f);          // orange
                 shapeRenderer.rect(e.x - 0.75f, e.y - 0.75f, 1.5f, 1.5f);
             } else {
-                shapeRenderer.setColor(0.85f, 0.15f, 0.15f, 1f);
-                shapeRenderer.rect(e.x - 0.4f, e.y - 0.4f, 0.8f, 0.8f);
+                float hw = enemyHalfSize(e.type);
+                float[] col = enemyColor(e.type);
+                shapeRenderer.setColor(col[0], col[1], col[2], 1f);
+                shapeRenderer.rect(e.x - hw, e.y - hw, hw * 2f, hw * 2f);
             }
         }
 
@@ -380,21 +387,29 @@ public class GameScreen implements Screen,
         // Enemy HP bars — boss gets a wider, taller bar
         for (Enemy e : enemies) {
             float frac    = Math.max(0, e.hp / e.maxHp);
-            float hpBarW  = (e instanceof Boss) ? 2f    : 0.8f;
+            float hpBarW  = (e instanceof Boss) ? 2f    : enemyHalfSize(e.type) * 2f;
             float hpBarHt = (e instanceof Boss) ? 0.12f : 0.07f;
             float bx      = e.x - hpBarW / 2f;
-            float by      = (e instanceof Boss) ? e.y + 0.85f : e.y + 0.52f;
+            float by      = (e instanceof Boss) ? e.y + 0.85f : e.y + enemyHalfSize(e.type) + 0.12f;
             shapeRenderer.setColor(0.25f, 0f, 0f, 0.9f);
             shapeRenderer.rect(bx, by, hpBarW, hpBarHt);
             shapeRenderer.setColor(0.9f, 0.12f, 0.12f, 1f);
             shapeRenderer.rect(bx, by, hpBarW * frac, hpBarHt);
         }
 
-        // Projectiles
-        shapeRenderer.setColor(Color.YELLOW);
+        // Projectiles — colour and shape by type
         for (Projectile p : projectiles) {
             float h = p.size / 2f;
-            shapeRenderer.rect(p.x - h, p.y - h, p.size, p.size);
+            if (p.projectileType == ProjectileType.FIREBALL) {
+                shapeRenderer.setColor(1f, 0.38f, 0f, 1f);  // orange fireball
+                shapeRenderer.circle(p.x, p.y, h, 12);
+            } else if (p.projectileType == ProjectileType.ROCKET) {
+                shapeRenderer.setColor(0.9f, 0.9f, 0.15f, 1f); // bright yellow rocket
+                shapeRenderer.rect(p.x - h, p.y - h, p.size, p.size);
+            } else {
+                shapeRenderer.setColor(Color.YELLOW);
+                shapeRenderer.rect(p.x - h, p.y - h, p.size, p.size);
+            }
         }
         shapeRenderer.end();
         Gdx.gl.glDisable(GL20.GL_BLEND);
@@ -587,6 +602,34 @@ public class GameScreen implements Screen,
         batch.end();
     }
 
+    /** Visual half-size (world units) for each enemy type. Hitbox stays 0.8f. */
+    private static float enemyHalfSize(EnemyType t) {
+        if (t == null) return 0.4f;
+        switch (t) {
+            case RABBID:    return 0.3f;  // tiny, fast
+            case ALIEN:     return 0.4f;  // standard
+            case JELLYFISH: return 0.38f;
+            case ROBOT:     return 0.45f;
+            case SHARK:     return 0.55f; // large
+            case ZOMBIE:    return 0.6f;  // largest regular
+            default:        return 0.4f;
+        }
+    }
+
+    /** RGB colour for each enemy type. */
+    private static float[] enemyColor(EnemyType t) {
+        if (t == null) return new float[]{0.85f, 0.15f, 0.15f};
+        switch (t) {
+            case RABBID:    return new float[]{0.9f,  0.55f, 0.9f};  // pink-purple
+            case ALIEN:     return new float[]{0.2f,  0.85f, 0.3f};  // green
+            case JELLYFISH: return new float[]{0.4f,  0.7f,  1.0f};  // light blue
+            case ROBOT:     return new float[]{0.55f, 0.55f, 0.65f}; // steel grey
+            case SHARK:     return new float[]{0.2f,  0.35f, 0.7f};  // dark blue
+            case ZOMBIE:    return new float[]{0.35f, 0.55f, 0.25f}; // sickly green
+            default:        return new float[]{0.85f, 0.15f, 0.15f};
+        }
+    }
+
     /** Finds nearest enemy not already visited by a bouncing projectile. */
     private Enemy findNearestBounceTarget(Projectile p, Array<Enemy> enemies) {
         Enemy nearest = null;
@@ -641,8 +684,24 @@ public class GameScreen implements Screen,
     public void onWaveEnd() {
         // Wave timer hit zero — clear regular enemies, spawn the location boss, play boss music
         enemySpawner.clearNonBossEnemies();
-        enemySpawner.spawnBoss(camera.viewportWidth, camera.viewportHeight);
+        Boss boss = enemySpawner.spawnBoss(camera.viewportWidth, camera.viewportHeight);
         AudioManager.getInstance().playMusic(MusicType.BOSS);
+
+        // Attach minion spawn callbacks
+        if (boss.ai instanceof MegalodonAI) {
+            // Ocean: spawns 2 sharks near itself
+            ((MegalodonAI) boss.ai).setMinionCallback((bx, by) -> {
+                enemySpawner.spawnMinionAt(EnemyType.SHARK, bx, by);
+                enemySpawner.spawnMinionAt(EnemyType.SHARK, bx, by);
+            });
+        } else if (boss.ai instanceof PickleRickAI) {
+            // Space: spawns 1 robot + 1 zombie near itself
+            ((PickleRickAI) boss.ai).setMinionCallback((bx, by) -> {
+                enemySpawner.spawnMinionAt(EnemyType.ROBOT,  bx, by);
+                enemySpawner.spawnMinionAt(EnemyType.ZOMBIE, bx, by);
+            });
+        }
+        // Slenderman (Forest) has no minions
     }
 
     // --- XPSystem.XPListener ---
