@@ -1,6 +1,7 @@
 package com.softchaos.managers;
 
 import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.Preferences;
 import com.badlogic.gdx.audio.Music;
 import com.badlogic.gdx.audio.Sound;
 import com.softchaos.utils.MusicType;
@@ -15,15 +16,23 @@ public class AudioManager {
     private Music     nextMusic;
     private MusicType currentMusicType;
 
-    private float musicVolume = 0.7f;
-    private float sfxVolume   = 1.0f;
+    private static final String PREFS_NAME = "softchaos.settings";
+    private static final String PREF_MUSIC  = "musicVolume";
+    private static final String PREF_SFX    = "sfxVolume";
+
+    private float musicVolume;
+    private float sfxVolume;
 
     // Fade state
     private boolean fading    = false;
     private float   fadeTimer = 0f;
     private static final float FADE_DURATION = 1.0f;
 
-    private AudioManager() {}
+    private AudioManager() {
+        Preferences prefs = Gdx.app.getPreferences(PREFS_NAME);
+        musicVolume = prefs.getFloat(PREF_MUSIC, 0.7f);
+        sfxVolume   = prefs.getFloat(PREF_SFX,   1.0f);
+    }
 
     public static AudioManager getInstance() {
         if (instance == null) instance = new AudioManager();
@@ -97,9 +106,13 @@ public class AudioManager {
     public void setMusicVolume(float volume) {
         musicVolume = volume;
         if (currentMusic != null && !fading) currentMusic.setVolume(musicVolume);
+        Gdx.app.getPreferences(PREFS_NAME).putFloat(PREF_MUSIC, volume).flush();
     }
 
-    public void setSFXVolume(float volume) { sfxVolume = volume; }
+    public void setSFXVolume(float volume) {
+        sfxVolume = volume;
+        Gdx.app.getPreferences(PREFS_NAME).putFloat(PREF_SFX, volume).flush();
+    }
 
     public float getMusicVolume() { return musicVolume; }
     public float getSFXVolume()   { return sfxVolume; }
