@@ -118,11 +118,20 @@ public class UpgradeSystem {
     /** Generate standard upgrade options when no JSON is available. */
     private Array<UpgradeConfig> buildFallbackUpgrades(Weapon weapon) {
         Array<UpgradeConfig> list = new Array<>();
+        boolean isAreaWeapon = weapon.id.equals("sword")
+                            || weapon.id.equals("diary")
+                            || weapon.id.equals("nuclear_bazooka");
         list.add(make(weapon.id, WeaponRarity.COMMON,   "+20% Damage",      "Damage x1.2",                    1.20f, 1.00f, 0, 0));
         list.add(make(weapon.id, WeaponRarity.COMMON,   "+30% Damage",      "Damage x1.3",                    1.30f, 1.00f, 0, 0));
         list.add(make(weapon.id, WeaponRarity.RARE,     "Faster Attack",    "Cooldown -20%",                  1.00f, 0.80f, 0, 0));
         list.add(make(weapon.id, WeaponRarity.RARE,     "Double Shot",      "+1 projectile",                  1.00f, 1.00f, 1, 0));
-        list.add(make(weapon.id, WeaponRarity.EPIC,     "Piercing",         "Pierce 1 more enemy",            1.00f, 1.00f, 0, 1));
+        if (isAreaWeapon) {
+            String sizeName = weapon.id.equals("sword") ? "Wider Swing" : "Bigger Explosion";
+            String sizeDesc = weapon.id.equals("sword") ? "+30% swing area"  : "+30% explosion radius";
+            list.add(makeSize(weapon.id, WeaponRarity.EPIC, sizeName, sizeDesc, 1.30f));
+        } else {
+            list.add(make(weapon.id, WeaponRarity.EPIC, "Piercing", "Pierce 1 more enemy", 1.00f, 1.00f, 0, 1));
+        }
         list.add(make(weapon.id, WeaponRarity.EPIC,     "Power Surge",      "Damage x1.5, Cooldown -10%",     1.50f, 0.90f, 0, 0));
         list.add(make(weapon.id, WeaponRarity.LEGENDARY,"OVERCLOCK",        "Damage x2, Speed x2, +1 proj",   2.00f, 0.50f, 1, 0));
         return list;
@@ -142,7 +151,15 @@ public class UpgradeSystem {
         c.piercingAdd        = pierceAdd;
         return c;
     }
-
+    private UpgradeConfig makeSize(String weaponId, WeaponRarity rarity,
+                                   String name, String statLine, float sizeMul) {
+        UpgradeConfig c  = new UpgradeConfig();
+        c.weaponId       = weaponId;
+        c.rarity         = rarity;
+        c.description    = name + "|" + statLine;
+        c.sizeMultiplier = sizeMul;
+        return c;
+    }
     public void applyUpgrade(Weapon weapon, UpgradeConfig upgrade) {
         weaponSystem.applyUpgrade(weapon, upgrade);
         pickedCounts.getAndIncrement(upgradeKey(upgrade), 0, 1);

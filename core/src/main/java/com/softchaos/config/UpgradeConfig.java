@@ -9,6 +9,7 @@ public class UpgradeConfig {
     public String description;
     public float damageMultiplier    = 1f;
     public float cooldownMultiplier  = 1f;
+    public float sizeMultiplier      = 1f;
     public int   projectileCountAdd  = 0;
     public int   piercingAdd         = 0;
     public String specialEffect;

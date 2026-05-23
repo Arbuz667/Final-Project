@@ -10,6 +10,8 @@ public enum EnemyType {
     // OCEAN
     SHARK,
     JELLYFISH,
+    // Ranged (any location)
+    SNIPER,
     // Bosses
     SLENDERMAN,
     PICKLE_RICK,

@@ -52,7 +52,7 @@ public class PickleRickAI extends BossAI {
         float dy = player.y - self.y;
         float dist = (float) Math.sqrt(dx * dx + dy * dy);
         if (dist < MELEE_RANGE + 0.5f) {
-            float dmg = self.phase >= 3 ? 40f : 25f;
+            float dmg = self.phase >= 3 ? 35f : 25f;
             player.takeDamage(dmg);
             if (dist > 0) {
                 player.applyKnockback((dx / dist) * 5f, (dy / dist) * 5f, 0.2f);

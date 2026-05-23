@@ -7,5 +7,6 @@ public enum ProjectileType {
     DOUBLE_BULLET,
     SHURIKEN,
     ROCKET,
-    POTATO
+    POTATO,
+    ENEMY_BULLET
 }

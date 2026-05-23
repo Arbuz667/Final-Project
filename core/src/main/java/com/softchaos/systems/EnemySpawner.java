@@ -8,6 +8,7 @@ import com.badlogic.gdx.utils.Pool;
 import com.softchaos.ai.ChaseAI;
 import com.softchaos.ai.MegalodonAI;
 import com.softchaos.ai.PickleRickAI;
+import com.softchaos.ai.RangedAI;
 import com.softchaos.ai.SlendermanAI;
 import com.softchaos.ai.SwarmAI;
 import com.softchaos.ai.TankAI;
@@ -22,6 +23,16 @@ public class EnemySpawner {
     private static final float INITIAL_INTERVAL = 0.8f;  // seconds between spawns
     private static final float MIN_INTERVAL     = 0.15f; // floor for scaling
     private static final float SCALE_RATE       = 0.005f; // reduction per second
+
+    // Dynamic damage modifier: +0.1x every 30 seconds
+    private static final float DAMAGE_SCALE_INTERVAL = 30f;
+    private static final float DAMAGE_SCALE_STEP     = 0.1f;
+    private float damageMultiplier = 1.0f;
+    private float damageScaleTimer = 0f;
+
+    // Ranged enemy: spawn 1 SNIPER every 52 regular enemies
+    private static final int SNIPER_EVERY = 52;
+    private int regularSpawnCount = 0;
 
     private final Array<Enemy> activeEnemies;
     private float spawnTimer;
@@ -44,9 +55,21 @@ public class EnemySpawner {
 
     public void update(float delta, float sessionTime) {
         scaleDifficulty(sessionTime);
+
+        // Dynamic damage modifier: +0.1x every 30s
+        damageScaleTimer += delta;
+        if (damageScaleTimer >= DAMAGE_SCALE_INTERVAL) {
+            damageScaleTimer -= DAMAGE_SCALE_INTERVAL;
+            damageMultiplier += DAMAGE_SCALE_STEP;
+        }
+
         spawnTimer += delta;
         if (spawnTimer >= spawnInterval) {
             spawnEnemy(getEnemyTypeForLocation());
+            regularSpawnCount++;
+            if (regularSpawnCount % SNIPER_EVERY == 0) {
+                spawnEnemy(EnemyType.SNIPER);
+            }
             spawnTimer = 0f;
         }
     }
@@ -102,12 +125,20 @@ public class EnemySpawner {
                 e.maxHp  = 300f; e.speed = 1.5f; e.damage = 9f; e.xpDrop = 28;
                 e.ai = new TankAI();
                 break;
+            // ── RANGED ───────────────────────────────────────────────────────
+            case SNIPER:
+                e.maxHp  = 90f;  e.speed = 2.5f; e.damage = 12f; e.xpDrop = 20;
+                e.ai = new RangedAI();
+                break;
             default:
                 e.maxHp  = 100f; e.speed = 3.5f; e.damage = 5f;  e.xpDrop = 8;
                 e.ai = new ChaseAI();
                 break;
         }
         e.hp              = e.maxHp;
+        e.maxHp          *= getHpMultiplier();
+        e.hp              = e.maxHp;
+        e.damage         *= damageMultiplier;
         e.chestDropChance = 0.01f;
         e.chestType       = ChestType.GOLD;
     }
@@ -123,6 +154,17 @@ public class EnemySpawner {
             case 1: return new float[]{ MathUtils.random(0, screenW), -margin };
             case 2: return new float[]{ -margin,          MathUtils.random(0, screenH) };
             default:return new float[]{ screenW + margin, MathUtils.random(0, screenH) };
+        }
+    }
+
+    /** HP multiplier based on location (FOREST=1x, OCEAN=2x, SPACE=3x). */
+    private float getHpMultiplier() {
+        if (location == null) return 1f;
+        switch (location) {
+            case FOREST: return 1f;
+            case OCEAN:  return 2f;
+            case SPACE:  return 3f;
+            default:     return 1f;
         }
     }
 

@@ -27,6 +27,8 @@ public class WeaponSystem {
     public void applyUpgrade(Weapon w, UpgradeConfig upgrade) {
         w.damage          *= upgrade.damageMultiplier;
         w.cooldown        *= upgrade.cooldownMultiplier;
+        w.size            *= upgrade.sizeMultiplier;
+        w.explosionRadius *= upgrade.sizeMultiplier;
         w.projectileCount += upgrade.projectileCountAdd;
         w.piercing        += upgrade.piercingAdd;
         // TODO M3: handle specialEffect string

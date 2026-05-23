@@ -6,16 +6,16 @@ import com.softchaos.entities.Player;
 
 /**
  * Slenderman — Forest boss, 3 phases.
- * Phase 1: Slow walk + teleport every 3s + melee 30 dmg.
- * Phase 2 (<66% HP): Teleport every 2s + knockback to player on each teleport.
- * Phase 3 (<33% HP): Teleport every 1s + heavy knockback + 50 dmg on contact.
+ * Phase 1: Slow walk + teleport every 4s + melee 30 dmg.
+ * Phase 2 (<66% HP): Teleport every 3s + knockback to player on each teleport.
+ * Phase 3 (<33% HP): Teleport every 2s + heavy knockback + 50 dmg on contact.
  */
 public class SlendermanAI extends BossAI {
 
-    private static final float TELEPORT_RADIUS    = 3f;
-    private static final float TELEPORT_INTERVAL_P1 = 3f;
-    private static final float TELEPORT_INTERVAL_P2 = 2f;
-    private static final float TELEPORT_INTERVAL_P3 = 1f;
+    private static final float TELEPORT_RADIUS    = 4.5f;
+    private static final float TELEPORT_INTERVAL_P1 = 4f;
+    private static final float TELEPORT_INTERVAL_P2 = 3f;
+    private static final float TELEPORT_INTERVAL_P3 = 2f;
     private static final float MELEE_RANGE          = 1.5f;
     private static final float MELEE_COOLDOWN       = 0.8f;
 
@@ -75,7 +75,7 @@ public class SlendermanAI extends BossAI {
         float dy   = player.y - self.y;
         float dist = (float) Math.sqrt(dx * dx + dy * dy);
         if (dist < MELEE_RANGE + 0.5f) {
-            float dmg = self.phase >= 3 ? 50f : 30f;
+            float dmg = self.phase >= 3 ? 20f : 10f;
             player.takeDamage(dmg);
             if (dist > 0) {
                 float force = self.phase >= 3 ? 10f : 8f;

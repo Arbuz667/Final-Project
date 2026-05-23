@@ -2,6 +2,7 @@ package com.softchaos.entities;
 
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.math.Rectangle;
+import com.badlogic.gdx.utils.Array;
 import com.softchaos.ai.EnemyAI;
 import com.softchaos.utils.ChestType;
 import com.softchaos.utils.EnemyType;
@@ -23,6 +24,9 @@ public class Enemy {
 
     // Melee attack cooldown — prevents hitting player every frame
     public float meleeCooldown = 0f;
+
+    /** Projectiles queued by RangedAI to be collected by GameScreen each frame. */
+    public final Array<Projectile> pendingShots = new Array<>();
 
     // From config
     public int xpDrop;
@@ -82,6 +86,7 @@ public class Enemy {
     /** Reset for Pool<Enemy> reuse. */
     public void reset() {
         meleeCooldown = 0f;
+        pendingShots.clear();
         hp          = maxHp;
         cringeMeter = 0f;
     }

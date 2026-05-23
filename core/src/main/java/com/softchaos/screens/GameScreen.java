@@ -54,6 +54,7 @@ public class GameScreen implements Screen,
     private Player player;
     private Array<Enemy> enemies;
     private Array<Projectile> projectiles;
+    private Array<Projectile> enemyProjectiles;
 
     private Texture playerTexture;
     private Texture backgroundTexture;
@@ -136,6 +137,7 @@ public class GameScreen implements Screen,
 
         enemies       = new Array<>();
         projectiles   = new Array<>();
+        enemyProjectiles = new Array<>();
 
         if (existingPlayer != null) {
             player   = existingPlayer;
@@ -249,6 +251,26 @@ public class GameScreen implements Screen,
                 }
             } else {
                 e.meleeCooldown = 0f; // reset when not touching
+            }
+        }
+
+        // Drain pending shots from RangedAI enemies into enemyProjectiles
+        for (Enemy e : enemies) {
+            if (!e.pendingShots.isEmpty()) {
+                enemyProjectiles.addAll(e.pendingShots);
+                e.pendingShots.clear();
+            }
+        }
+
+        // Update enemy projectiles + collision with player
+        for (int i = enemyProjectiles.size - 1; i >= 0; i--) {
+            Projectile p = enemyProjectiles.get(i);
+            p.update(delta);
+            if (!p.active) { enemyProjectiles.removeIndex(i); continue; }
+            if (p.hitbox.overlaps(player.hitbox)) {
+                player.takeDamage(p.damage);
+                p.active = false;
+                enemyProjectiles.removeIndex(i);
             }
         }
 
@@ -401,6 +423,13 @@ public class GameScreen implements Screen,
             shapeRenderer.rect(bx, by, hpBarW, hpBarHt);
             shapeRenderer.setColor(0.9f, 0.12f, 0.12f, 1f);
             shapeRenderer.rect(bx, by, hpBarW * frac, hpBarHt);
+        }
+
+        // Enemy projectiles — red bullets
+        for (Projectile p : enemyProjectiles) {
+            float h = p.size / 2f;
+            shapeRenderer.setColor(1f, 0.1f, 0.1f, 1f);
+            shapeRenderer.circle(p.x, p.y, h, 10);
         }
 
         // Projectiles — colour and shape by type
@@ -612,12 +641,13 @@ public class GameScreen implements Screen,
     private static float enemyHalfSize(EnemyType t) {
         if (t == null) return 0.4f;
         switch (t) {
-            case RABBID:    return 0.3f;  // tiny, fast
-            case ALIEN:     return 0.4f;  // standard
+            case RABBID:    return 0.3f;
+            case ALIEN:     return 0.4f;
             case JELLYFISH: return 0.38f;
             case ROBOT:     return 0.45f;
-            case SHARK:     return 0.55f; // large
-            case ZOMBIE:    return 0.6f;  // largest regular
+            case SHARK:     return 0.55f;
+            case ZOMBIE:    return 0.6f;
+            case SNIPER:    return 0.35f;
             default:        return 0.4f;
         }
     }
@@ -626,12 +656,13 @@ public class GameScreen implements Screen,
     private static float[] enemyColor(EnemyType t) {
         if (t == null) return new float[]{0.85f, 0.15f, 0.15f};
         switch (t) {
-            case RABBID:    return new float[]{0.9f,  0.55f, 0.9f};  // pink-purple
-            case ALIEN:     return new float[]{0.2f,  0.85f, 0.3f};  // green
-            case JELLYFISH: return new float[]{0.4f,  0.7f,  1.0f};  // light blue
-            case ROBOT:     return new float[]{0.55f, 0.55f, 0.65f}; // steel grey
-            case SHARK:     return new float[]{0.2f,  0.35f, 0.7f};  // dark blue
-            case ZOMBIE:    return new float[]{0.35f, 0.55f, 0.25f}; // sickly green
+            case RABBID:    return new float[]{0.9f,  0.55f, 0.9f};
+            case ALIEN:     return new float[]{0.2f,  0.85f, 0.3f};
+            case JELLYFISH: return new float[]{0.4f,  0.7f,  1.0f};
+            case ROBOT:     return new float[]{0.55f, 0.55f, 0.65f};
+            case SHARK:     return new float[]{0.2f,  0.35f, 0.7f};
+            case ZOMBIE:    return new float[]{0.35f, 0.55f, 0.25f};
+            case SNIPER:    return new float[]{0.9f,  0.8f,  0.1f};  // yellow
             default:        return new float[]{0.85f, 0.15f, 0.15f};
         }
     }
@@ -695,10 +726,10 @@ public class GameScreen implements Screen,
 
         // Attach minion spawn callbacks
         if (boss.ai instanceof MegalodonAI) {
-            // Ocean: spawns 2 sharks near itself
+            // Ocean: spawns 8 sharks near itself
             ((MegalodonAI) boss.ai).setMinionCallback((bx, by) -> {
-                enemySpawner.spawnMinionAt(EnemyType.SHARK, bx, by);
-                enemySpawner.spawnMinionAt(EnemyType.SHARK, bx, by);
+                for (int i = 0; i < 8; i++)
+                    enemySpawner.spawnMinionAt(EnemyType.SHARK, bx, by);
             });
         } else if (boss.ai instanceof PickleRickAI) {
             // Space: spawns 1 robot + 1 zombie near itself
