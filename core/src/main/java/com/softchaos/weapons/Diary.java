@@ -21,12 +21,12 @@ public class Diary extends Weapon {
         type            = WeaponType.DIARY;
         rarity          = WeaponRarity.COMMON;
         cooldown        = 1.8f;
-        damage          = 25f;
+        damage          = 30f;
         size            = 0.45f;
         projectileCount = 1;
         piercing        = 0;
-        projectileSpeed = 3f;    // noticeably slow — fireball feel
-        explosionRadius = 1.8f;  // small AOE (NuclearBazooka has 5.0)
+        projectileSpeed = 3.5f;    // noticeably slow — fireball feel
+        explosionRadius = 1.9f;  // small AOE (NuclearBazooka has 5.0)
     }
 
     @Override

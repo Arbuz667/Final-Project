@@ -21,6 +21,9 @@ public class Enemy {
     public float knockbackVelX, knockbackVelY;
     public float knockbackTimer;
 
+    // Melee attack cooldown — prevents hitting player every frame
+    public float meleeCooldown = 0f;
+
     // From config
     public int xpDrop;
     public float chestDropChance;
@@ -78,6 +81,7 @@ public class Enemy {
 
     /** Reset for Pool<Enemy> reuse. */
     public void reset() {
+        meleeCooldown = 0f;
         hp          = maxHp;
         cringeMeter = 0f;
     }

@@ -50,6 +50,8 @@ public class CharacterSelectScreen implements Screen {
     private GlyphLayout        layout;
     private Texture            background;
 
+    private int hovered = -1;
+
     public CharacterSelectScreen(SoftChaosGame game) {
         this.game    = game;
         this.weapons = new Weapon[]{ new Sword(), new Bow(), new Diary() };
@@ -82,6 +84,18 @@ public class CharacterSelectScreen implements Screen {
         float startX = (sw - totalW) / 2f;
         float cardY  = (sh - CARD_H) / 2f - 30f;
 
+        // Mouse hover detection
+        float mx = Gdx.input.getX();
+        float my = sh - Gdx.input.getY();
+        hovered = -1;
+        for (int i = 0; i < 3; i++) {
+            float cx = startX + i * (CARD_W + CARD_GAP);
+            if (mx >= cx && mx <= cx + CARD_W && my >= cardY && my <= cardY + CARD_H) {
+                hovered = i;
+                break;
+            }
+        }
+
         // Background
         batch.setProjectionMatrix(camera.combined);
         batch.begin();
@@ -96,17 +110,28 @@ public class CharacterSelectScreen implements Screen {
         for (int i = 0; i < 3; i++) {
             float   cx = startX + i * (CARD_W + CARD_GAP);
             float[] c  = COLORS[i];
+            boolean hot = (i == hovered);
             // Card body
-            shape.setColor(0.06f, 0.06f, 0.14f, 0.96f);
+            shape.setColor(hot ? 0.10f : 0.06f, hot ? 0.10f : 0.06f, hot ? 0.20f : 0.14f, 0.97f);
             shape.rect(cx, cardY, CARD_W, CARD_H);
             // Class color top stripe
             shape.setColor(c[0], c[1], c[2], 1f);
             shape.rect(cx, cardY + CARD_H - 6f, CARD_W, 6f);
             // Class color left glow
-            shape.setColor(c[0], c[1], c[2], 0.22f);
+            shape.setColor(c[0], c[1], c[2], hot ? 0.45f : 0.22f);
             shape.rect(cx, cardY, 4f, CARD_H);
         }
         shape.end();
+
+        // Hover outline
+        if (hovered >= 0) {
+            float   hx = startX + hovered * (CARD_W + CARD_GAP);
+            float[] hc = COLORS[hovered];
+            shape.begin(ShapeRenderer.ShapeType.Line);
+            shape.setColor(hc[0], hc[1], hc[2], 0.9f);
+            shape.rect(hx, cardY, CARD_W, CARD_H);
+            shape.end();
+        }
         Gdx.gl.glDisable(GL20.GL_BLEND);
 
         // ── Text pass ─────────────────────────────────────────────────
@@ -172,12 +197,13 @@ public class CharacterSelectScreen implements Screen {
         // Footer
         font.getData().setScale(1.25f);
         font.setColor(0.5f, 0.5f, 0.55f, 1f);
-        layout.setText(font, "Press  1 / 2 / 3  to pick");
-        font.draw(batch, "Press  1 / 2 / 3  to pick", (sw - layout.width) / 2f, cardY - 24f);
+        layout.setText(font, "Click or press  1 / 2 / 3  to pick");
+        font.draw(batch, "Click or press  1 / 2 / 3  to pick", (sw - layout.width) / 2f, cardY - 24f);
 
         batch.end();
 
         // ── Input ─────────────────────────────────────────────────────
+        if (Gdx.input.justTouched() && hovered >= 0) pick(hovered);
         if (Gdx.input.isKeyJustPressed(Input.Keys.NUM_1)) pick(0);
         if (Gdx.input.isKeyJustPressed(Input.Keys.NUM_2)) pick(1);
         if (Gdx.input.isKeyJustPressed(Input.Keys.NUM_3)) pick(2);

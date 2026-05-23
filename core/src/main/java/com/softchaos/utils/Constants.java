@@ -13,7 +13,7 @@ public final class Constants {
     public static final float PPM = 32f; // pixels per meter
 
     // Player
-    public static final float PLAYER_MAX_HP    = 100f;
+    public static final float PLAYER_MAX_HP    = 200f;
     public static final float PLAYER_SPEED     = 5f;
     public static final int   PLAYER_MAX_WEAPONS = 4;
 
@@ -22,9 +22,9 @@ public final class Constants {
 
     // Upgrade rarities (weights summing to 100)
     public static final int RARITY_WEIGHT_COMMON    = 60;
-    public static final int RARITY_WEIGHT_RARE      = 28;
-    public static final int RARITY_WEIGHT_EPIC      = 10;
-    public static final int RARITY_WEIGHT_LEGENDARY = 2;
+    public static final int RARITY_WEIGHT_RARE      = 30;
+    public static final int RARITY_WEIGHT_EPIC      = 9;
+    public static final int RARITY_WEIGHT_LEGENDARY = 1;
 
     // Wave
     public static final float RARE_EVENT_CHANCE = 0.001f;

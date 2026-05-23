@@ -21,6 +21,18 @@ public class Player {
     public float knockbackX, knockbackY;
     private float knockbackTimer;
 
+    // Regen: 1 HP every 2 seconds
+    private static final float REGEN_INTERVAL = 2.0f;
+    private static final float REGEN_AMOUNT   = 1.0f;
+    private float regenTimer = 0f;
+
+    // Invincibility frames after taking a hit
+    private static final float IFRAME_DURATION = 1.0f;
+    private float iframeTimer = 0f;
+
+    /** True while the player is invincible (flashing after a hit). */
+    public boolean isInvincible() { return iframeTimer > 0f; }
+
     public Player() {
         maxHp   = Constants.PLAYER_MAX_HP;
         hp      = maxHp;
@@ -64,6 +76,16 @@ public class Player {
 
         hitbox.setPosition(x - hitbox.width / 2f, y - hitbox.height / 2f);
 
+        // Invincibility frames countdown
+        if (iframeTimer > 0f) iframeTimer = Math.max(0f, iframeTimer - delta);
+
+        // HP regeneration
+        regenTimer += delta;
+        if (regenTimer >= REGEN_INTERVAL) {
+            regenTimer = 0f;
+            if (hp < maxHp) hp = Math.min(maxHp, hp + REGEN_AMOUNT);
+        }
+
         // Update all equipped weapons
         for (Weapon w : weapons) {
             w.update(delta);
@@ -71,7 +93,10 @@ public class Player {
     }
 
     public void takeDamage(float dmg) {
+        if (iframeTimer > 0f) return;   // invincible — ignore hit
         hp = Math.max(0, hp - dmg);
+        iframeTimer = IFRAME_DURATION;   // start i-frames
+        regenTimer  = 0f;               // reset regen cooldown on hit
     }
 
     public void applyKnockback(float vx, float vy, float duration) {

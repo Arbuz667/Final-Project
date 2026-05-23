@@ -240,9 +240,15 @@ public class GameScreen implements Screen,
                 i--;
                 continue;
             }
-            // Enemy touches player → deal damage
+            // Enemy touches player → deal damage (once per 0.8s)
             if (e.hitbox.overlaps(player.hitbox)) {
-                player.takeDamage(e.damage * delta);
+                e.meleeCooldown -= delta;
+                if (e.meleeCooldown <= 0f) {
+                    player.takeDamage(e.damage);
+                    e.meleeCooldown = 0.8f;
+                }
+            } else {
+                e.meleeCooldown = 0f; // reset when not touching
             }
         }
 

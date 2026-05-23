@@ -18,8 +18,8 @@ public class DesertEagles extends Weapon {
         name            = "Desert Eagles";
         type            = WeaponType.DESERT_EAGLES;
         rarity          = WeaponRarity.RARE;
-        cooldown        = 1.15f;
-        damage          = 28f;
+        cooldown        = 1.05f;
+        damage          = 32f;
         size            = 0.25f;
         projectileCount = 2;
         piercing        = 0;

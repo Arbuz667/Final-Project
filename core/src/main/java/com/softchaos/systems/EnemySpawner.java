@@ -77,29 +77,29 @@ public class EnemySpawner {
         switch (type) {
             // ── FOREST ──────────────────────────────────────────────────────
             case ALIEN:
-                e.maxHp  = 120f;  e.speed = 4.0f; e.damage = 4f;  e.xpDrop = 8;
+                e.maxHp  = 120f;  e.speed = 4.0f; e.damage = 4f;  e.xpDrop = 10;
                 e.ai = new ChaseAI();
                 break;
             case RABBID:
-                e.maxHp  = 80f;  e.speed = 5.5f; e.damage = 3f;  e.xpDrop = 6;
+                e.maxHp  = 80f;  e.speed = 5.1f; e.damage = 3f;  e.xpDrop = 8;
                 e.ai = new SwarmAI();
                 break;
             // ── OCEAN ────────────────────────────────────────────────────────
             case SHARK:
-                e.maxHp  = 180f; e.speed = 2.5f; e.damage = 10f; e.xpDrop = 15;
+                e.maxHp  = 180f; e.speed = 2.5f; e.damage = 7f; e.xpDrop = 20;
                 e.ai = new TankAI();
                 break;
             case JELLYFISH:
-                e.maxHp  = 70f;  e.speed = 2.0f; e.damage = 7f;  e.xpDrop = 10;
+                e.maxHp  = 70f;  e.speed = 2.0f; e.damage = 4f;  e.xpDrop = 15;
                 e.ai = new ChaseAI();
                 break;
             // ── SPACE ─────────────────────────────────────────────────────────
             case ROBOT:
-                e.maxHp  = 150f; e.speed = 3.5f; e.damage = 7f;  e.xpDrop = 12;
+                e.maxHp  = 110f; e.speed = 3.5f; e.damage = 6f;  e.xpDrop = 25;
                 e.ai = new ChaseAI();
                 break;
             case ZOMBIE:
-                e.maxHp  = 200f; e.speed = 1.5f; e.damage = 14f; e.xpDrop = 18;
+                e.maxHp  = 150f; e.speed = 1.5f; e.damage = 9f; e.xpDrop = 28;
                 e.ai = new TankAI();
                 break;
             default:
@@ -171,7 +171,7 @@ public class EnemySpawner {
         switch (location) {
             case OCEAN:
                 boss.ai     = new MegalodonAI();
-                boss.maxHp  = 10000f;
+                boss.maxHp  = 7500f;
                 boss.speed  = 3f;
                 boss.damage = 15f;
                 break;
@@ -179,13 +179,13 @@ public class EnemySpawner {
                 boss.ai     = new PickleRickAI();
                 boss.maxHp  = 13500f;
                 boss.speed  = 4.5f;
-                boss.damage = 10f;
+                boss.damage = 17.5f;
                 break;
             default: // FOREST
                 boss.ai     = new SlendermanAI();
-                boss.maxHp  = 8500f;
+                boss.maxHp  = 5000f;
                 boss.speed  = 2f;
-                boss.damage = 20f;
+                boss.damage = 10f;
                 break;
         }
         boss.hp              = boss.maxHp;

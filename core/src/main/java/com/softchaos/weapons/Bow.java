@@ -17,7 +17,7 @@ public class Bow extends Weapon {
         type            = WeaponType.BOW;
         rarity          = WeaponRarity.COMMON;
         cooldown        = 2.0f;
-        damage          = 50f;
+        damage          = 65f;
         size            = 0.3f;
         projectileCount = 1;
         piercing        = 0;

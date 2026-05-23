@@ -19,8 +19,8 @@ public class Sword extends Weapon {
         type           = WeaponType.SWORD;
         rarity         = WeaponRarity.COMMON;
         cooldown       = 0.85f;
-        damage         = 20f;
-        size           = 1.5f;  // hitbox size
+        damage         = 25f;
+        size           = 1.8f;  // hitbox size
         projectileCount = 1;
         piercing       = -1;    // hits all enemies in arc
         projectileSpeed = 0f;
