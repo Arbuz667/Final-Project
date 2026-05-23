@@ -86,20 +86,20 @@ public class EnemySpawner {
                 break;
             // ── OCEAN ────────────────────────────────────────────────────────
             case SHARK:
-                e.maxHp  = 180f; e.speed = 2.5f; e.damage = 7f; e.xpDrop = 20;
+                e.maxHp  = 300f; e.speed = 4.4f; e.damage = 7f; e.xpDrop = 20;
                 e.ai = new TankAI();
                 break;
             case JELLYFISH:
-                e.maxHp  = 70f;  e.speed = 2.0f; e.damage = 4f;  e.xpDrop = 15;
+                e.maxHp  = 235f;  e.speed = 3.2f; e.damage = 4f;  e.xpDrop = 15;
                 e.ai = new ChaseAI();
                 break;
             // ── SPACE ─────────────────────────────────────────────────────────
             case ROBOT:
-                e.maxHp  = 110f; e.speed = 3.5f; e.damage = 6f;  e.xpDrop = 25;
+                e.maxHp  = 380f; e.speed = 3.5f; e.damage = 6f;  e.xpDrop = 25;
                 e.ai = new ChaseAI();
                 break;
             case ZOMBIE:
-                e.maxHp  = 150f; e.speed = 1.5f; e.damage = 9f; e.xpDrop = 28;
+                e.maxHp  = 300f; e.speed = 1.5f; e.damage = 9f; e.xpDrop = 28;
                 e.ai = new TankAI();
                 break;
             default:
