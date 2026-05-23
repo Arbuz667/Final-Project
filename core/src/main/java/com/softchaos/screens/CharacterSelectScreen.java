@@ -8,32 +8,64 @@ import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
+import com.badlogic.gdx.graphics.g2d.GlyphLayout;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
+import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.softchaos.SoftChaosGame;
 import com.softchaos.managers.GameStateManager;
+import com.softchaos.weapons.Bow;
+import com.softchaos.weapons.Diary;
+import com.softchaos.weapons.Sword;
+import com.softchaos.weapons.Weapon;
 
-/** Start screen. Press ENTER to begin the run from Forest. */
+/** Pre-run character selection. Player chooses one of 3 classes, each with a fixed starting weapon. */
 public class CharacterSelectScreen implements Screen {
 
+    private static final float CARD_W   = 280f;
+    private static final float CARD_H   = 380f;
+    private static final float CARD_GAP = 30f;
+
+    // Character definitions
+    private static final String[] NAMES  = { "Warrior",    "Archer",    "Mage"       };
+    private static final String[] FLAVOR = {
+        "Melee fighter.\nSlashes nearby\nenemies.",
+        "Agile marksman.\nFast arrows from\na distance.",
+        "Spellcaster.\nFireballs with\nAOE explosion."
+    };
+    // Class accent colors: [R, G, B]
+    private static final float[][] COLORS = {
+        { 0.95f, 0.25f, 0.25f },  // red   — Swordsman
+        { 0.25f, 0.85f, 0.35f },  // green — Archer
+        { 0.55f, 0.25f, 0.95f },  // purple— Mage
+    };
+
     private final SoftChaosGame game;
-    private SpriteBatch        batch;
-    private BitmapFont         font;
-    private Texture            background;
+    private final Weapon[]      weapons;
+
     private OrthographicCamera camera;
+    private SpriteBatch        batch;
+    private ShapeRenderer      shape;
+    private BitmapFont         font;
+    private BitmapFont         fontBig;
+    private GlyphLayout        layout;
+    private Texture            background;
 
     public CharacterSelectScreen(SoftChaosGame game) {
-        this.game = game;
+        this.game    = game;
+        this.weapons = new Weapon[]{ new Sword(), new Bow(), new Diary() };
     }
 
     @Override
     public void show() {
-        int w = Gdx.graphics.getWidth();
-        int h = Gdx.graphics.getHeight();
         camera = new OrthographicCamera();
-        camera.setToOrtho(false, w, h);
+        camera.setToOrtho(false, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
         batch      = new SpriteBatch();
+        shape      = new ShapeRenderer();
         font       = new BitmapFont();
-        font.getData().setScale(2.5f);
+        fontBig    = new BitmapFont();
+        layout     = new GlyphLayout();
+        font.getData().setScale(1.5f);
+        fontBig.getData().setScale(2.4f);
         background = new Texture(Gdx.files.internal("main_menu.png"));
         background.setFilter(Texture.TextureFilter.Linear, Texture.TextureFilter.Linear);
     }
@@ -41,28 +73,127 @@ public class CharacterSelectScreen implements Screen {
     @Override
     public void render(float delta) {
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
+        camera.update();
 
         int sw = Gdx.graphics.getWidth();
         int sh = Gdx.graphics.getHeight();
-        int cx = sw / 2;
-        int cy = sh / 2;
 
+        float totalW = 3 * CARD_W + 2 * CARD_GAP;
+        float startX = (sw - totalW) / 2f;
+        float cardY  = (sh - CARD_H) / 2f - 30f;
+
+        // Background
         batch.setProjectionMatrix(camera.combined);
         batch.begin();
         batch.draw(background, 0, 0, sw, sh);
-        font.setColor(new Color(0.6f, 1f, 0.6f, 1f));
-        font.draw(batch, "Forest  ->  Ocean  ->  Space", cx - 310f, cy + 60f);
-        font.setColor(Color.YELLOW);
-        font.draw(batch, "[ENTER] to start",   cx - 170f, cy - 20f);
         batch.end();
 
-        if (Gdx.input.isKeyJustPressed(Input.Keys.ENTER)) {
-            GameStateManager.getInstance().reset();
-            game.setScreen(new WeaponSelectScreen(game));
+        // ── Shape pass ────────────────────────────────────────────────
+        Gdx.gl.glEnable(GL20.GL_BLEND);
+        Gdx.gl.glBlendFunc(GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA);
+        shape.setProjectionMatrix(camera.combined);
+        shape.begin(ShapeRenderer.ShapeType.Filled);
+        for (int i = 0; i < 3; i++) {
+            float   cx = startX + i * (CARD_W + CARD_GAP);
+            float[] c  = COLORS[i];
+            // Card body
+            shape.setColor(0.06f, 0.06f, 0.14f, 0.96f);
+            shape.rect(cx, cardY, CARD_W, CARD_H);
+            // Class color top stripe
+            shape.setColor(c[0], c[1], c[2], 1f);
+            shape.rect(cx, cardY + CARD_H - 6f, CARD_W, 6f);
+            // Class color left glow
+            shape.setColor(c[0], c[1], c[2], 0.22f);
+            shape.rect(cx, cardY, 4f, CARD_H);
         }
+        shape.end();
+        Gdx.gl.glDisable(GL20.GL_BLEND);
+
+        // ── Text pass ─────────────────────────────────────────────────
+        batch.setProjectionMatrix(camera.combined);
+        batch.begin();
+
+        // Title
+        fontBig.getData().setScale(2.2f);
+        fontBig.setColor(Color.WHITE);
+        layout.setText(fontBig, "CHOOSE YOUR CHARACTER");
+        fontBig.draw(batch, "CHOOSE YOUR CHARACTER", (sw - layout.width) / 2f, sh - 55f);
+
+        for (int i = 0; i < 3; i++) {
+            Weapon  w  = weapons[i];
+            float   cx = startX + i * (CARD_W + CARD_GAP);
+            float[] c  = COLORS[i];
+
+            // Key hint [1] / [2] / [3]
+            font.getData().setScale(1.2f);
+            font.setColor(0.5f, 0.5f, 0.55f, 1f);
+            font.draw(batch, "[" + (i + 1) + "]", cx + 8f, cardY + CARD_H - 12f);
+
+            // Class name (large, centered, class color)
+            fontBig.getData().setScale(1.9f);
+            fontBig.setColor(c[0], c[1], c[2], 1f);
+            layout.setText(fontBig, NAMES[i]);
+            fontBig.draw(batch, NAMES[i], cx + (CARD_W - layout.width) / 2f, cardY + CARD_H - 48f);
+
+            // Divider
+            font.getData().setScale(1.0f);
+            font.setColor(0.3f, 0.3f, 0.42f, 1f);
+            font.draw(batch, "- - - - - - - - - - -", cx + 10f, cardY + CARD_H - 104f);
+
+            // Flavor description (multi-line manual)
+            font.getData().setScale(1.25f);
+            font.setColor(0.75f, 0.75f, 0.80f, 1f);
+            String[] lines = FLAVOR[i].split("\n");
+            float lineH = 28f;
+            float descY = cardY + CARD_H - 128f;
+            for (String line : lines) {
+                font.draw(batch, line, cx + 14f, descY);
+                descY -= lineH;
+            }
+
+            // Starting weapon section
+            float weapY = cardY + 160f;
+            font.getData().setScale(1.1f);
+            font.setColor(0.45f, 0.45f, 0.52f, 1f);
+            font.draw(batch, "--- Starting Weapon ---", cx + 6f, weapY);
+
+            fontBig.getData().setScale(1.45f);
+            fontBig.setColor(Color.WHITE);
+            layout.setText(fontBig, w.name);
+            fontBig.draw(batch, w.name, cx + (CARD_W - layout.width) / 2f, weapY - 28f);
+
+            font.getData().setScale(1.3f);
+            font.setColor(Color.YELLOW);
+            font.draw(batch, String.format("DMG    %.0f",  w.damage),   cx + 16f, weapY - 64f);
+            font.setColor(new Color(0.35f, 0.9f, 0.35f, 1f));
+            font.draw(batch, String.format("CD     %.2fs", w.cooldown), cx + 16f, weapY - 94f);
+        }
+
+        // Footer
+        font.getData().setScale(1.25f);
+        font.setColor(0.5f, 0.5f, 0.55f, 1f);
+        layout.setText(font, "Press  1 / 2 / 3  to pick");
+        font.draw(batch, "Press  1 / 2 / 3  to pick", (sw - layout.width) / 2f, cardY - 24f);
+
+        batch.end();
+
+        // ── Input ─────────────────────────────────────────────────────
+        if (Gdx.input.isKeyJustPressed(Input.Keys.NUM_1)) pick(0);
+        if (Gdx.input.isKeyJustPressed(Input.Keys.NUM_2)) pick(1);
+        if (Gdx.input.isKeyJustPressed(Input.Keys.NUM_3)) pick(2);
     }
 
-    @Override public void resize(int width, int height) {}
+    private void pick(int index) {
+        GameStateManager gsm = GameStateManager.getInstance();
+        gsm.reset();
+        gsm.selectedCharacter = index;
+        gsm.startingWeapon    = weapons[index];
+        game.setScreen(new GameScreen(game));
+    }
+
+    @Override public void resize(int width, int height) {
+        if (camera != null) camera.setToOrtho(false, width, height);
+    }
     @Override public void pause() {}
     @Override public void resume() {}
 
@@ -74,7 +205,9 @@ public class CharacterSelectScreen implements Screen {
     @Override
     public void dispose() {
         if (batch      != null) { batch.dispose();      batch      = null; }
+        if (shape      != null) { shape.dispose();      shape      = null; }
         if (font       != null) { font.dispose();       font       = null; }
+        if (fontBig    != null) { fontBig.dispose();    fontBig    = null; }
         if (background != null) { background.dispose(); background = null; }
     }
 }
