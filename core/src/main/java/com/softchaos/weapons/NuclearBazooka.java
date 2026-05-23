@@ -17,7 +17,7 @@ public class NuclearBazooka extends Weapon {
         type            = WeaponType.NUCLEAR_BAZOOKA;
         rarity          = WeaponRarity.EPIC;
         cooldown        = 3f;
-        damage          = 70f;
+        damage          = 85f;
         size            = 0.5f;
         projectileCount = 1;
         piercing        = 0;
