@@ -66,6 +66,11 @@ public class UpgradeScreen implements Screen {
         int w = Gdx.graphics.getWidth();
         int h = Gdx.graphics.getHeight();
 
+        // Mouse state
+        float mx      = Gdx.input.getX();
+        float my      = h - Gdx.input.getY();
+        boolean clicked = Gdx.input.justTouched();
+
         // Dark overlay
         Gdx.gl.glEnable(GL20.GL_BLEND);
         Gdx.gl.glBlendFunc(GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA);
@@ -78,6 +83,20 @@ public class UpgradeScreen implements Screen {
         float totalW = count * CARD_W + (count - 1) * CARD_GAP;
         float startX = (w - totalW) / 2f;
         float cardY  = (h - CARD_H) / 2f;
+
+        // Detect hovered card
+        int hoveredCard = -1;
+        for (int i = 0; i < count; i++) {
+            float cx = startX + i * (CARD_W + CARD_GAP);
+            if (mx >= cx && mx <= cx + CARD_W && my >= cardY && my <= cardY + CARD_H)
+                hoveredCard = i;
+        }
+
+        // Skip button geometry
+        float skipW = 200f, skipH = 46f;
+        float skipX = (w - skipW) / 2f;
+        float skipY = cardY - 78f;
+        boolean overSkip = mx >= skipX && mx <= skipX + skipW && my >= skipY && my <= skipY + skipH;
 
         shape.setProjectionMatrix(camera.combined);
 
@@ -95,6 +114,12 @@ public class UpgradeScreen implements Screen {
             shape.setColor(0.12f, 0.12f, 0.18f, 1f);
             shape.rect(cx, cardY, CARD_W, CARD_H);
 
+            // Hover overlay
+            if (i == hoveredCard) {
+                shape.setColor(1f, 1f, 1f, 0.07f);
+                shape.rect(cx, cardY, CARD_W, CARD_H);
+            }
+
             // Rarity colour bar at top of card
             Color rc = rarityColor(c.rarity);
             shape.setColor(rc);
@@ -104,6 +129,11 @@ public class UpgradeScreen implements Screen {
             shape.setColor(rc);
             shape.circle(cx + CARD_W / 2f, cardY + CARD_H + 30f, 22f, 32);
         }
+
+        // Skip button
+        shape.setColor(overSkip ? new Color(0.75f, 0.25f, 0.25f, 0.9f)
+                                : new Color(0.2f,  0.2f,  0.25f, 0.8f));
+        shape.rect(skipX, skipY, skipW, skipH);
         shape.end();
 
         // Card borders
@@ -111,9 +141,11 @@ public class UpgradeScreen implements Screen {
         for (int i = 0; i < count; i++) {
             UpgradeConfig c = choices.get(i);
             float cx = startX + i * (CARD_W + CARD_GAP);
-            shape.setColor(rarityColor(c.rarity));
+            shape.setColor(i == hoveredCard ? Color.WHITE : rarityColor(c.rarity));
             shape.rect(cx, cardY, CARD_W, CARD_H);
         }
+        shape.setColor(overSkip ? Color.WHITE : new Color(0.5f, 0.5f, 0.5f, 1f));
+        shape.rect(skipX, skipY, skipW, skipH);
         shape.end();
         Gdx.gl.glDisable(GL20.GL_BLEND);
 
@@ -172,16 +204,28 @@ public class UpgradeScreen implements Screen {
             bodyFont.draw(batch, statLine, cx + (CARD_W - layout.width) / 2f, cardY + CARD_H - 122f);
         }
 
+        // Skip button text
+        bodyFont.setColor(Color.WHITE);
+        layout.setText(bodyFont, "SKIP");
+        bodyFont.draw(batch, "SKIP", skipX + (skipW - layout.width) / 2f, skipY + skipH - 10f);
+
         // Footer hint
         bodyFont.setColor(new Color(0.5f, 0.5f, 0.5f, 1f));
-        bodyFont.draw(batch, "Press 1 / 2 / 3 to select", w / 2f - 130f, cardY - 30f);
+        bodyFont.draw(batch, "1 / 2 / 3  or click card  |  ESC or Skip to cancel", w / 2f - 210f, cardY - 30f);
 
         batch.end();
 
-        // Input
+        // Input — keyboard
         if (Gdx.input.isKeyJustPressed(Input.Keys.NUM_1) && count > 0) pick(0);
         if (Gdx.input.isKeyJustPressed(Input.Keys.NUM_2) && count > 1) pick(1);
         if (Gdx.input.isKeyJustPressed(Input.Keys.NUM_3) && count > 2) pick(2);
+        if (Gdx.input.isKeyJustPressed(Input.Keys.ESCAPE))             returnToGame();
+
+        // Input — mouse
+        if (clicked) {
+            if (hoveredCard >= 0 && hoveredCard < count) pick(hoveredCard);
+            else if (overSkip)                           returnToGame();
+        }
     }
 
     private void pick(int i) {

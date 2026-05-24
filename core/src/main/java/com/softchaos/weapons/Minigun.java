@@ -23,6 +23,7 @@ public class Minigun extends Weapon {
         piercing        = 0;
         projectileSpeed = 7f;
         explosionRadius = 0f;
+        iconPath        = "weapons/mini-gun icon.png";
     }
 
     @Override

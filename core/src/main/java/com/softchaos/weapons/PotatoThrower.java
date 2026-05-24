@@ -26,6 +26,7 @@ public class PotatoThrower extends Weapon {
         piercing        = 0;
         projectileSpeed = 7f;
         explosionRadius = 2.5f;
+        iconPath        = "weapons/patoeto-thrower icon.png";
     }
 
     @Override

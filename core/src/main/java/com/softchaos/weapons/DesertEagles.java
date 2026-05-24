@@ -25,6 +25,7 @@ public class DesertEagles extends Weapon {
         piercing        = 0;
         projectileSpeed = 18f;
         explosionRadius = 0f;
+        iconPath        = "weapons/desert eagels icon.png";
     }
 
     @Override

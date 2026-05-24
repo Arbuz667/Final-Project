@@ -15,7 +15,7 @@ import com.badlogic.gdx.math.Rectangle;
 import com.softchaos.SoftChaosGame;
 import com.softchaos.managers.AudioManager;
 
-/** Music and SFX volume sliders. ESC → back to previous screen. */
+/** Music volume slider. ESC → back to previous screen. */
 public class SettingsScreen implements Screen {
 
     private static final float SLIDER_W    = 500f;
@@ -35,14 +35,13 @@ public class SettingsScreen implements Screen {
     private Texture            background;
     private GlyphLayout        layout;
 
-    /** 0 = Music, 1 = SFX */
-    private int     selected    = 0;
+    /** 0 = Music only */
     private float   holdTimer   = 0f;
     private float   repeatTimer = 0f;
     private boolean holding     = false;
     private int     dragging    = -1; // which slider is being dragged (-1 = none)
 
-    private float sliderX, musicY, sfxY;
+    private float sliderX, musicY;
 
     public SettingsScreen(SoftChaosGame game, Screen returnScreen) {
         this.game         = game;
@@ -63,14 +62,13 @@ public class SettingsScreen implements Screen {
         titleFont.getData().setScale(3.5f);
         bodyFont   = new BitmapFont();
         bodyFont.getData().setScale(2f);
-        background = new Texture(Gdx.files.internal("main_menu.png"));
+        background = new Texture(Gdx.files.internal("screens/main_menu.png"));
         background.setFilter(Texture.TextureFilter.Linear, Texture.TextureFilter.Linear);
 
         float cx = w / 2f;
         float cy = h / 2f;
         sliderX = cx - SLIDER_W / 2f;
         musicY  = cy + 40f;
-        sfxY    = cy - 90f;
     }
 
     @Override
@@ -84,7 +82,6 @@ public class SettingsScreen implements Screen {
 
         AudioManager am    = AudioManager.getInstance();
         float        music = am.getMusicVolume();
-        float        sfx   = am.getSFXVolume();
 
         // Background
         batch.setProjectionMatrix(camera.combined);
@@ -98,7 +95,7 @@ public class SettingsScreen implements Screen {
         shape.setProjectionMatrix(camera.combined);
         shape.begin(ShapeRenderer.ShapeType.Filled);
         shape.setColor(0f, 0f, 0f, 0.65f);
-        shape.rect(sliderX - 60f, sfxY - 70f, SLIDER_W + 120f, musicY - sfxY + SLIDER_H + 160f);
+        shape.rect(sliderX - 60f, musicY - 70f, SLIDER_W + 120f, SLIDER_H + 160f);
         shape.end();
         Gdx.gl.glDisable(GL20.GL_BLEND);
 
@@ -106,14 +103,11 @@ public class SettingsScreen implements Screen {
         Gdx.gl.glEnable(GL20.GL_BLEND);
         Gdx.gl.glBlendFunc(GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA);
         shape.begin(ShapeRenderer.ShapeType.Filled);
-        drawSlider(music, sliderX, musicY, selected == 0);
-        drawSlider(sfx,   sliderX, sfxY,   selected == 1);
+        drawSlider(music, sliderX, musicY, true);
         shape.end();
         shape.begin(ShapeRenderer.ShapeType.Line);
-        shape.setColor(selected == 0 ? Color.WHITE : new Color(0.5f, 0.5f, 0.5f, 1f));
+        shape.setColor(Color.WHITE);
         shape.rect(sliderX, musicY, SLIDER_W, SLIDER_H);
-        shape.setColor(selected == 1 ? Color.WHITE : new Color(0.5f, 0.5f, 0.5f, 1f));
-        shape.rect(sliderX, sfxY, SLIDER_W, SLIDER_H);
         shape.end();
         Gdx.gl.glDisable(GL20.GL_BLEND);
 
@@ -125,19 +119,15 @@ public class SettingsScreen implements Screen {
         layout.setText(titleFont, "SETTINGS");
         titleFont.draw(batch, "SETTINGS", cx - layout.width / 2f, musicY + SLIDER_H + 140f);
 
-        bodyFont.setColor(selected == 0 ? Color.YELLOW : Color.LIGHT_GRAY);
+        bodyFont.setColor(Color.YELLOW);
         bodyFont.draw(batch, String.format("Music Volume:  %d%%", Math.round(music * 100)),
             sliderX, musicY + SLIDER_H + 36f);
 
-        bodyFont.setColor(selected == 1 ? Color.YELLOW : Color.LIGHT_GRAY);
-        bodyFont.draw(batch, String.format("SFX Volume:    %d%%", Math.round(sfx * 100)),
-            sliderX, sfxY + SLIDER_H + 36f);
-
         bodyFont.setColor(new Color(0.6f, 0.6f, 0.6f, 1f));
         bodyFont.getData().setScale(1.4f);
-        layout.setText(bodyFont, "Click slider · Arrow keys · ESC to close");
+        layout.setText(bodyFont, "Click slider \u00b7 Arrow keys \u00b7 ESC to close");
         bodyFont.draw(batch, "Click slider \u00b7 Arrow keys \u00b7 ESC to close",
-            cx - layout.width / 2f, sfxY - 28f);
+            cx - layout.width / 2f, musicY - 28f);
         bodyFont.getData().setScale(2f);
 
         batch.end();
@@ -152,20 +142,15 @@ public class SettingsScreen implements Screen {
         boolean pressed = Gdx.input.isTouched();
         boolean justReleased = !pressed && dragging != -1;
 
-        // Detect drag start
         if (Gdx.input.justTouched()) {
             if (new Rectangle(sliderX, musicY - 10f, SLIDER_W, SLIDER_H + 20f).contains(mx, my)) {
-                dragging = 0; selected = 0;
-            } else if (new Rectangle(sliderX, sfxY - 10f, SLIDER_W, SLIDER_H + 20f).contains(mx, my)) {
-                dragging = 1; selected = 1;
+                dragging = 0;
             }
         }
 
-        if (dragging != -1 && pressed) {
+        if (dragging == 0 && pressed) {
             float val = clamp((mx - sliderX) / SLIDER_W);
-            AudioManager am = AudioManager.getInstance();
-            if (dragging == 0) am.setMusicVolume(val);
-            else               am.setSFXVolume(val);
+            AudioManager.getInstance().setMusicVolume(val);
         }
 
         if (justReleased) dragging = -1;
@@ -173,11 +158,6 @@ public class SettingsScreen implements Screen {
 
     private void handleKeyboard(float delta) {
         AudioManager am = AudioManager.getInstance();
-
-        if (Gdx.input.isKeyJustPressed(Input.Keys.UP)   || Gdx.input.isKeyJustPressed(Input.Keys.W))
-            selected = 0;
-        if (Gdx.input.isKeyJustPressed(Input.Keys.DOWN) || Gdx.input.isKeyJustPressed(Input.Keys.S))
-            selected = 1;
 
         boolean leftDown  = Gdx.input.isKeyPressed(Input.Keys.LEFT)  || Gdx.input.isKeyPressed(Input.Keys.A);
         boolean rightDown = Gdx.input.isKeyPressed(Input.Keys.RIGHT) || Gdx.input.isKeyPressed(Input.Keys.D);
@@ -195,8 +175,7 @@ public class SettingsScreen implements Screen {
             }
             if (fire) {
                 float dir = leftDown ? -STEP : STEP;
-                if (selected == 0) am.setMusicVolume(clamp(am.getMusicVolume() + dir));
-                else               am.setSFXVolume  (clamp(am.getSFXVolume()   + dir));
+                am.setMusicVolume(clamp(am.getMusicVolume() + dir));
             }
         } else {
             holding = false; holdTimer = 0f; repeatTimer = 0f;

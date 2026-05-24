@@ -39,12 +39,12 @@ public class MainMenuScreen implements Screen {
         camera.setToOrtho(false, w, h);
 
         batch      = new SpriteBatch();
-        background = load("main_menu.png");
-        playNormal  = load("play_button.png");
-        playHover   = load("active_play_button.png");
-        quitNormal  = load("quit_button.png");
-        quitHover   = load("active_quit_button.png");
-        settingsBtn = load("settings_button.png");
+        background = load("screens/main_menu.png");
+        playNormal  = load("buttons/play_button.png");
+        playHover   = load("buttons/active_play_button.png");
+        quitNormal  = load("buttons/quit_button.png");
+        quitHover   = load("buttons/active_quit_button.png");
+        settingsBtn = load("buttons/settings_button.png");
 
         // Hit areas — sized to the normal button display dimensions
         float bw = 320f, bh = 88f;

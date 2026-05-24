@@ -26,6 +26,7 @@ public class Shurikens extends Weapon {
         piercing        = -1;   // bounce logic controls lifetime
         projectileSpeed = 12f;
         explosionRadius = 0f;
+        iconPath        = "weapons/shuriken icon.png";
     }
 
     @Override

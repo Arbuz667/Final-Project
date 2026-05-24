@@ -8,10 +8,10 @@ public enum LocationType {
     /** Returns the full-screen background PNG filename for this location. */
     public String backgroundFile() {
         switch (this) {
-            case FOREST: return "forest_location.png";
-            case OCEAN:  return "sea_location.png";
-            case SPACE:  return "space_location.png";
-            default:     return "forest_location.png";
+            case FOREST: return "screens/forest_location.png";
+            case OCEAN:  return "screens/sea_location.png";
+            case SPACE:  return "screens/space_location.png";
+            default:     return "screens/forest_location.png";
         }
     }
 

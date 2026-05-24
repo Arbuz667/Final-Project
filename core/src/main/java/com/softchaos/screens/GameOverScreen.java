@@ -40,11 +40,11 @@ public class GameOverScreen implements Screen {
 
         batch      = new SpriteBatch();
 
-        background  = load("death menu.png");
-        retryNormal = load("retry button.png");
-        retryHover  = load("retry button light.png");
-        quitNormal  = load("death menu quit.png");
-        quitHover   = load("death menu quit light.png");
+        background  = load("screens/death menu.png");
+        retryNormal = load("buttons/retry button.png");
+        retryHover  = load("buttons/retry button light.png");
+        quitNormal  = load("buttons/death menu quit.png");
+        quitHover   = load("buttons/death menu quit light.png");
 
         float cx = w / 2f, cy = h / 2f;
         retryHit = new Rectangle(cx - BTN_W / 2f, cy - 140f, BTN_W, BTN_H);

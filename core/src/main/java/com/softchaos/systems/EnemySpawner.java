@@ -30,8 +30,8 @@ public class EnemySpawner {
     private float damageMultiplier = 1.0f;
     private float damageScaleTimer = 0f;
 
-    // Ranged enemy: spawn 1 SNIPER every 52 regular enemies
-    private static final int SNIPER_EVERY = 52;
+    // Ranged enemy: spawn 1 SNIPER every 25 regular enemies
+    private static final int SNIPER_EVERY = 25;
     private int regularSpawnCount = 0;
 
     private final Array<Enemy> activeEnemies;
@@ -139,7 +139,7 @@ public class EnemySpawner {
         e.maxHp          *= getHpMultiplier();
         e.hp              = e.maxHp;
         e.damage         *= damageMultiplier;
-        e.chestDropChance = 0.01f;
+        e.chestDropChance = 0.02f;
         e.chestType       = ChestType.GOLD;
     }
 

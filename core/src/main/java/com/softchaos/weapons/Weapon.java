@@ -23,6 +23,7 @@ public abstract class Weapon {
     public int   piercing;
     public float projectileSpeed;
     public float explosionRadius;
+    public String iconPath = "weapons/icon for weapon.png";
 
     /** Tick the cooldown timer. */
     public void update(float delta) {

@@ -23,6 +23,7 @@ public class NuclearBazooka extends Weapon {
         piercing        = 0;
         projectileSpeed = 6f;   // slow
         explosionRadius = 5.0f;
+        iconPath        = "weapons/Nuclear Bazooka icon.png";
     }
 
     @Override

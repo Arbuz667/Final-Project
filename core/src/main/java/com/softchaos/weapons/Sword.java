@@ -25,6 +25,7 @@ public class Sword extends Weapon {
         piercing       = -1;    // hits all enemies in arc
         projectileSpeed = 0f;
         explosionRadius = 0f;
+        iconPath       = "weapons/Yellow sword icon.png";
     }
 
     @Override

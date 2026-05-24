@@ -27,6 +27,7 @@ public class Diary extends Weapon {
         piercing        = 0;
         projectileSpeed = 3.5f;    // noticeably slow — fireball feel
         explosionRadius = 1.9f;  // small AOE (NuclearBazooka has 5.0)
+        iconPath        = "weapons/diary icon.png";
     }
 
     @Override

@@ -33,6 +33,9 @@ public class Player {
     /** True while the player is invincible (flashing after a hit). */
     public boolean isInvincible() { return iframeTimer > 0f; }
 
+    /** True when the player is actively moving (used for walking animation). */
+    public boolean isMoving = false;
+
     public Player() {
         maxHp   = Constants.PLAYER_MAX_HP;
         hp      = maxHp;
@@ -51,6 +54,7 @@ public class Player {
             x += knockbackX * delta;
             y += knockbackY * delta;
             knockbackTimer -= delta;
+            isMoving = true;
         } else {
             // WASD movement
             float moveX = 0, moveY = 0;
@@ -58,6 +62,7 @@ public class Player {
             if (Gdx.input.isKeyPressed(Input.Keys.S)) moveY -= 1;
             if (Gdx.input.isKeyPressed(Input.Keys.A)) moveX -= 1;
             if (Gdx.input.isKeyPressed(Input.Keys.D)) moveX += 1;
+            isMoving = (moveX != 0 || moveY != 0);
             // Normalize diagonal movement so speed is consistent
             if (moveX != 0 && moveY != 0) {
                 moveX *= 0.7071f;

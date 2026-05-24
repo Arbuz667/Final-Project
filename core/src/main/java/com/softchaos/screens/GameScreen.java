@@ -4,6 +4,7 @@ import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.Screen;
 import com.badlogic.gdx.math.MathUtils;
+import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.OrthographicCamera;
@@ -56,7 +57,25 @@ public class GameScreen implements Screen,
     private Array<Projectile> projectiles;
     private Array<Projectile> enemyProjectiles;
 
-    private Texture playerTexture;
+    // Player animation
+    private Texture[]  playerFrames;
+    private int        playerFrameIdx  = 0;
+    private float      playerFrameTimer = 0f;
+    private static final float PLAYER_FRAME_DUR = 0.15f;
+
+    // Projectile textures
+    private Texture texArrow;
+    private Texture texBullet;
+    private Texture texShuriken;
+    private Texture texEnemyBullet;
+    private Texture texRocket;
+    private Texture texFireball;
+    private Texture texPotato;
+    private Texture texSword;
+
+    // Weapon icon textures (keyed by weapon.id)
+    private java.util.HashMap<String, Texture> weaponIcons;
+
     private Texture backgroundTexture;
 
     private WeaponSystem   weaponSystem;
@@ -76,10 +95,29 @@ public class GameScreen implements Screen,
     // Floating damage numbers
     private Array<DamageNumber> damageNumbers;
 
+    // Explosion animation
+    private Texture[] explosionFrames;
+    private Array<ExplosionEffect> explosions;
+
+    private static class ExplosionEffect {
+        float x, y, timer;
+        int   frame = 0;
+        static final float FRAME_DUR = 0.055f;
+        static final int   FRAME_COUNT = 8;
+        ExplosionEffect(float x, float y) { this.x = x; this.y = y; }
+        boolean isFinished() { return frame >= FRAME_COUNT; }
+    }
+
     // Location-transition fade
     private float    fadeAlpha        = 0f;
     private boolean  fadingOut        = false;
     private Runnable pendingTransition;
+
+    // Pause menu
+    private boolean   isPaused         = false;
+    private Texture   pauseRetryNormal, pauseRetryHover;
+    private Texture   pauseQuitNormal,  pauseQuitHover;
+    private Rectangle pauseRetryHit,    pauseQuitHit;
 
     private static class DamageNumber {
         float x, y, alpha;
@@ -116,7 +154,26 @@ public class GameScreen implements Screen,
 
         batch         = new SpriteBatch();
         shapeRenderer = new ShapeRenderer();
-        playerTexture = new Texture(Gdx.files.internal("player.png"));
+        // Load character-specific animation frames
+        int ch = GameStateManager.getInstance().selectedCharacter;
+        if (ch == 0) {
+            playerFrames = new Texture[]{
+                new Texture(Gdx.files.internal("characters/Warrior.png")),
+                new Texture(Gdx.files.internal("characters/Warrior left leg.png")),
+                new Texture(Gdx.files.internal("characters/Warrior\u00a0right leg.png"))
+            };
+        } else if (ch == 1) {
+            playerFrames = new Texture[]{
+                new Texture(Gdx.files.internal("characters/elf straight.png")),
+                new Texture(Gdx.files.internal("characters/elf left .png")),
+                new Texture(Gdx.files.internal("characters/elf right.png"))
+            };
+        } else {
+            playerFrames = new Texture[]{
+                new Texture(Gdx.files.internal("characters/witch.png")),
+                new Texture(Gdx.files.internal("characters/withc left.png"))
+            };
+        }
 
         // Load full-screen background for current location
         LocationType loc = GameStateManager.getInstance().currentLocation;
@@ -126,6 +183,36 @@ public class GameScreen implements Screen,
         }
         backgroundTexture = new Texture(Gdx.files.internal(loc.backgroundFile()));
 
+        // Projectile textures
+        texArrow       = new Texture(Gdx.files.internal("projectiles/arrow.png"));
+        texBullet      = new Texture(Gdx.files.internal("projectiles/bullet_player.png"));
+        texShuriken    = new Texture(Gdx.files.internal("weapons/shuriken icon.png"));
+        texEnemyBullet = new Texture(Gdx.files.internal("projectiles/bullet_enemy.png"));
+        texRocket      = new Texture(Gdx.files.internal("projectiles/rocket.png"));
+        texFireball    = new Texture(Gdx.files.internal("projectiles/fireball.png"));
+        texPotato      = new Texture(Gdx.files.internal("projectiles/potato.png"));
+        texSword       = new Texture(Gdx.files.internal("projectiles/sword texture.png"));
+        for (Texture t : new Texture[]{texArrow, texBullet, texShuriken, texEnemyBullet, texRocket, texFireball, texPotato, texSword})
+            t.setFilter(Texture.TextureFilter.Nearest, Texture.TextureFilter.Nearest);
+
+        // Weapon icons
+        weaponIcons = new java.util.HashMap<>();
+        String[][] iconMap = {
+            {"sword",          "weapons/Yellow sword icon.png"},
+            {"iron_bow",       "weapons/icon iron bow.png"},
+            {"diary",          "weapons/diary icon.png"},
+            {"desert_eagles",  "weapons/desert eagels icon.png"},
+            {"shurikens",      "weapons/shuriken icon.png"},
+            {"minigun",        "weapons/mini-gun icon.png"},
+            {"potato_thrower", "weapons/patoeto-thrower icon.png"},
+            {"nuclear_bazooka","weapons/Nuclear Bazooka icon.png"}
+        };
+        for (String[] pair : iconMap) {
+            Texture t = new Texture(Gdx.files.internal(pair[1]));
+            t.setFilter(Texture.TextureFilter.Linear, Texture.TextureFilter.Linear);
+            weaponIcons.put(pair[0], t);
+        }
+
         hudCamera = new OrthographicCamera();
         hudCamera.setToOrtho(false, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
         hudFont   = new BitmapFont();
@@ -134,6 +221,13 @@ public class GameScreen implements Screen,
         hudFontBig.getData().setScale(2.8f);
         glyphLayout   = new GlyphLayout();
         damageNumbers = new Array<>();
+        explosions    = new Array<>();
+
+        explosionFrames = new Texture[8];
+        for (int i = 0; i < 8; i++) {
+            explosionFrames[i] = new Texture(Gdx.files.internal("projectiles/explosion_f" + i + ".png"));
+            explosionFrames[i].setFilter(Texture.TextureFilter.Nearest, Texture.TextureFilter.Nearest);
+        }
 
         enemies       = new Array<>();
         projectiles   = new Array<>();
@@ -179,6 +273,18 @@ public class GameScreen implements Screen,
         waveManager.startWave(loc, 120f);
 
         AudioManager.getInstance().playMusic(MusicType.valueOf(loc.name()));
+
+        // Pause menu textures + hitboxes
+        pauseRetryNormal = new Texture(Gdx.files.internal("buttons/retry button.png"));
+        pauseRetryHover  = new Texture(Gdx.files.internal("buttons/retry button light.png"));
+        pauseQuitNormal  = new Texture(Gdx.files.internal("buttons/death menu quit.png"));
+        pauseQuitHover   = new Texture(Gdx.files.internal("buttons/death menu quit light.png"));
+        for (Texture t : new Texture[]{pauseRetryNormal, pauseRetryHover, pauseQuitNormal, pauseQuitHover})
+            t.setFilter(Texture.TextureFilter.Linear, Texture.TextureFilter.Linear);
+        float pcx = Gdx.graphics.getWidth()  / 2f;
+        float pcy = Gdx.graphics.getHeight() / 2f;
+        pauseRetryHit = new Rectangle(pcx - 150f, pcy - 140f, 300f, 84f);
+        pauseQuitHit  = new Rectangle(pcx - 150f, pcy - 240f, 300f, 84f);
     }
 
     /** Called by libGDX each time this screen becomes active. Does NOT reinitialize. */
@@ -195,6 +301,27 @@ public class GameScreen implements Screen,
     }
 
     private void update(float delta) {
+        // ESC — toggle pause (skip during location fade-out)
+        if (!fadingOut && Gdx.input.isKeyJustPressed(Input.Keys.ESCAPE)) {
+            isPaused = !isPaused;
+            return;
+        }
+
+        if (isPaused) {
+            float pmx    = Gdx.input.getX();
+            float pmy    = Gdx.graphics.getHeight() - Gdx.input.getY();
+            boolean pClk = Gdx.input.justTouched();
+            if ((pClk && pauseRetryHit.contains(pmx, pmy)) || Gdx.input.isKeyJustPressed(Input.Keys.ENTER)) {
+                GameStateManager.getInstance().reset();
+                game.setScreen(new CharacterSelectScreen(game));
+            }
+            if ((pClk && pauseQuitHit.contains(pmx, pmy)) || Gdx.input.isKeyJustPressed(Input.Keys.M)) {
+                GameStateManager.getInstance().reset();
+                game.setScreen(new MainMenuScreen(game));
+            }
+            return;
+        }
+
         // TAB — instant return to main menu
         if (Gdx.input.isKeyJustPressed(Input.Keys.TAB)) {
             GameStateManager.getInstance().reset();
@@ -214,6 +341,19 @@ public class GameScreen implements Screen,
         }
 
         player.update(delta);
+
+        // Advance walk animation when player is moving
+        if (player.isMoving && playerFrames.length > 1) {
+            playerFrameTimer += delta;
+            if (playerFrameTimer >= PLAYER_FRAME_DUR) {
+                playerFrameTimer -= PLAYER_FRAME_DUR;
+                playerFrameIdx = (playerFrameIdx + 1) % playerFrames.length;
+            }
+        } else if (!player.isMoving) {
+            playerFrameTimer = 0f;
+            playerFrameIdx   = 0;
+        }
+
         waveManager.update(delta);
         weaponSystem.update(delta, player, enemies, projectiles);
 
@@ -278,7 +418,13 @@ public class GameScreen implements Screen,
         for (int i = projectiles.size - 1; i >= 0; i--) {
             Projectile p = projectiles.get(i);
             p.update(delta);
-            if (!p.active) { projectiles.removeIndex(i); continue; }
+            if (!p.active) {
+                if (p.projectileType == ProjectileType.ROCKET ||
+                    p.projectileType == ProjectileType.FIREBALL)
+                    explosions.add(new ExplosionEffect(p.x, p.y));
+                projectiles.removeIndex(i);
+                continue;
+            }
 
             // Collision with enemies
             for (int ei = 0; ei < enemies.size; ei++) {
@@ -345,6 +491,17 @@ public class GameScreen implements Screen,
 
                 if (!p.active) break;
             }
+        }
+
+        // Update explosion animations
+        for (int i = explosions.size - 1; i >= 0; i--) {
+            ExplosionEffect ef = explosions.get(i);
+            ef.timer += delta;
+            while (ef.timer >= ExplosionEffect.FRAME_DUR) {
+                ef.timer -= ExplosionEffect.FRAME_DUR;
+                ef.frame++;
+            }
+            if (ef.isFinished()) explosions.removeIndex(i);
         }
 
         // Update floating damage numbers
@@ -426,33 +583,95 @@ public class GameScreen implements Screen,
         }
 
         // Enemy projectiles — red bullets
-        for (Projectile p : enemyProjectiles) {
-            float h = p.size / 2f;
-            shapeRenderer.setColor(1f, 0.1f, 0.1f, 1f);
-            shapeRenderer.circle(p.x, p.y, h, 10);
-        }
+        // (drawn as textures in the batch section below)
 
-        // Projectiles — colour and shape by type
-        for (Projectile p : projectiles) {
-            float h = p.size / 2f;
-            if (p.projectileType == ProjectileType.FIREBALL) {
-                shapeRenderer.setColor(1f, 0.38f, 0f, 1f);  // orange fireball
-                shapeRenderer.circle(p.x, p.y, h, 12);
-            } else if (p.projectileType == ProjectileType.ROCKET) {
-                shapeRenderer.setColor(0.9f, 0.9f, 0.15f, 1f); // bright yellow rocket
-                shapeRenderer.rect(p.x - h, p.y - h, p.size, p.size);
-            } else {
-                shapeRenderer.setColor(Color.YELLOW);
-                shapeRenderer.rect(p.x - h, p.y - h, p.size, p.size);
-            }
-        }
+        // Projectiles — drawn as textures in the batch section below
         shapeRenderer.end();
         Gdx.gl.glDisable(GL20.GL_BLEND);
 
-        // 3. Player sprite + UI
+        // 3. Projectiles (textured) + Player sprite + UI
         batch.setProjectionMatrix(camera.combined);
         batch.begin();
-        batch.draw(playerTexture, player.x - 1.046875f, player.y - 1.046875f, 2.09375f, 2.09375f);
+        // Explosion effects (draw under projectiles and player)
+        for (ExplosionEffect ef : explosions) {
+            if (!ef.isFinished()) {
+                float vis = 3.5f;
+                batch.draw(explosionFrames[ef.frame],
+                    ef.x - vis/2f, ef.y - vis/2f, vis, vis);
+            }
+        }
+        // Enemy projectiles
+        for (Projectile p : enemyProjectiles) {
+            float vis = Math.max(0.35f, p.size * 2.5f);
+            batch.draw(texEnemyBullet, p.x - vis/2f, p.y - vis/2f, vis, vis);
+        }
+        // Player projectiles
+        for (Projectile p : projectiles) {
+            float angle = (float)(Math.atan2(p.velY, p.velX) * MathUtils.radiansToDegrees);
+            switch (p.projectileType) {
+                case SWING_ARC: {
+                    // Direction is player→projectile midpoint (sword has no velocity)
+                    float dirX = p.x - player.x;
+                    float dirY = p.y - player.y;
+                    float swingAngle = (float)(Math.atan2(dirY, dirX) * MathUtils.radiansToDegrees);
+                    boolean flipX = dirX < 0;
+                    float vis = p.size * 1.3f;
+                    batch.draw(texSword, p.x - vis/2f, p.y - vis/2f,
+                               vis/2f, vis/2f, vis, vis, 1f, 1f, swingAngle,
+                               0, 0, texSword.getWidth(), texSword.getHeight(), flipX, false);
+                    break;
+                }
+                case FIREBALL: {
+                    // +180° because texture head points LEFT
+                    float vis = p.size * 2f;
+                    batch.draw(texFireball, p.x - vis/2f, p.y - vis/2f,
+                               vis/2f, vis/2f, vis, vis, 1f, 1f, angle + 180f,
+                               0, 0, texFireball.getWidth(), texFireball.getHeight(), false, false);
+                    break;
+                }
+                case BULLET: {
+                    if (p.source == com.softchaos.utils.WeaponType.BOW) {
+                        // Bow fires arrows — rotate to face direction
+                        float vis = p.size * 12f;
+                        batch.draw(texArrow, p.x - vis/2f, p.y - vis/2f,
+                                   vis/2f, vis/2f, vis, vis, 1f, 1f, angle,
+                                   0, 0, texArrow.getWidth(), texArrow.getHeight(), false, false);
+                    } else {
+                        // Minigun etc. — small bullet, no rotation needed
+                        float vis = p.size * 2.5f;
+                        batch.draw(texBullet, p.x - vis/2f, p.y - vis/2f, vis, vis);
+                    }
+                    break;
+                }
+                case ROCKET: {
+                    float vis = p.size * 2f;
+                    batch.draw(texRocket, p.x - vis/2f, p.y - vis/2f,
+                               vis/2f, vis/2f, vis, vis, 1f, 1f, angle - 90f,
+                               0, 0, texRocket.getWidth(), texRocket.getHeight(), false, false);
+                    break;
+                }
+                case POTATO: {
+                    float vis = p.size * 3.8f;
+                    batch.draw(texPotato, p.x - vis/2f, p.y - vis/2f, vis, vis);
+                    break;
+                }
+                case SHURIKEN: {
+                    float vis = p.size * 5f;
+                    batch.draw(texShuriken, p.x - vis/2f, p.y - vis/2f,
+                               vis/2f, vis/2f, vis, vis, 1f, 1f, angle,
+                               0, 0, texShuriken.getWidth(), texShuriken.getHeight(), false, false);
+                    break;
+                }
+                default: {
+                    // DOUBLE_BULLET
+                    float vis = p.size * 3.8f;
+                    batch.draw(texBullet, p.x - vis/2f, p.y - vis/2f, vis, vis);
+                    break;
+                }
+            }
+        }
+        // Player sprite
+        batch.draw(playerFrames[playerFrameIdx], player.x - 1.046875f, player.y - 1.046875f, 2.09375f, 2.09375f);
         uiManager.render(batch);
         batch.end();
 
@@ -469,6 +688,41 @@ public class GameScreen implements Screen,
             shapeRenderer.rect(0, 0, hudCamera.viewportWidth, hudCamera.viewportHeight);
             shapeRenderer.end();
             Gdx.gl.glDisable(GL20.GL_BLEND);
+        }
+
+        // 6. Pause overlay (drawn last so it appears on top of everything)
+        if (isPaused) drawPauseOverlay();
+    }
+
+    private void drawPauseOverlay() {
+        int   sw = Gdx.graphics.getWidth();
+        int   sh = Gdx.graphics.getHeight();
+        float mx = Gdx.input.getX();
+        float my = sh - Gdx.input.getY();
+
+        // Dark semi-transparent background
+        Gdx.gl.glEnable(GL20.GL_BLEND);
+        Gdx.gl.glBlendFunc(GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA);
+        shapeRenderer.setProjectionMatrix(hudCamera.combined);
+        shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
+        shapeRenderer.setColor(0f, 0f, 0f, 0.78f);
+        shapeRenderer.rect(0, 0, sw, sh);
+        shapeRenderer.end();
+        Gdx.gl.glDisable(GL20.GL_BLEND);
+
+        batch.setProjectionMatrix(hudCamera.combined);
+        batch.begin();
+        drawPauseBtn(pauseRetryNormal, pauseRetryHover, pauseRetryHit.contains(mx, my), pauseRetryHit);
+        drawPauseBtn(pauseQuitNormal,  pauseQuitHover,  pauseQuitHit.contains(mx, my),  pauseQuitHit);
+        batch.end();
+    }
+
+    private void drawPauseBtn(Texture normal, Texture hover, boolean isHover, Rectangle hit) {
+        if (!isHover) {
+            batch.draw(normal, hit.x, hit.y, hit.width, hit.height);
+        } else {
+            float drawH = hit.height * ((float) hover.getHeight() / normal.getHeight());
+            batch.draw(hover, hit.x, hit.y + hit.height / 2f - drawH / 2f, hit.width, drawH);
         }
     }
 
@@ -610,15 +864,28 @@ public class GameScreen implements Screen,
             hudFont.draw(batch, String.valueOf(i + 1), sx + 5f, slotY + slotH - 4f);
             if (filled) {
                 Weapon w = player.weapons.get(i);
-                hudFont.getData().setScale(1.25f);
+                // Icon on left
+                Texture wIcon = weaponIcons.get(w.id);
+                float iconSz = 52f;
+                if (wIcon != null)
+                    batch.draw(wIcon, sx + 5f, slotY + (slotH - iconSz) / 2f, iconSz, iconSz);
+                // Name + stats on right
+                float textX = sx + 62f;
+                float textAreaW = slotW - 62f - 4f;
+                hudFont.getData().setScale(1.1f);
                 hudFont.setColor(Color.WHITE);
                 glyphLayout.setText(hudFont, w.name);
-                hudFont.draw(batch, w.name, sx + (slotW - glyphLayout.width) / 2f, slotY + slotH - 18f);
-                hudFont.getData().setScale(0.95f);
+                hudFont.draw(batch, w.name, textX + (textAreaW - glyphLayout.width) / 2f, slotY + slotH - 14f);
+                hudFont.getData().setScale(0.9f);
                 hudFont.setColor(Color.YELLOW);
-                String stats = String.format("%.0f DMG  %.1fs", w.damage, w.cooldown);
-                glyphLayout.setText(hudFont, stats);
-                hudFont.draw(batch, stats, sx + (slotW - glyphLayout.width) / 2f, slotY + 18f);
+                String dmgStr = String.format("%.0f DMG", w.damage);
+                glyphLayout.setText(hudFont, dmgStr);
+                hudFont.draw(batch, dmgStr, textX + (textAreaW - glyphLayout.width) / 2f, slotY + 24f);
+                hudFont.getData().setScale(0.85f);
+                hudFont.setColor(new Color(0.6f, 0.8f, 1f, 1f));
+                String cdStr = String.format("%.1fs CD", w.cooldown);
+                glyphLayout.setText(hudFont, cdStr);
+                hudFont.draw(batch, cdStr, textX + (textAreaW - glyphLayout.width) / 2f, slotY + 11f);
             } else {
                 hudFont.getData().setScale(1.0f);
                 hudFont.setColor(0.28f, 0.28f, 0.32f, 0.8f);
@@ -770,10 +1037,25 @@ public class GameScreen implements Screen,
     public void dispose() {
         if (batch != null)         { batch.dispose();         batch = null; }
         if (shapeRenderer != null) { shapeRenderer.dispose(); shapeRenderer = null; }
-        if (playerTexture    != null) { playerTexture.dispose();    playerTexture    = null; }
+        if (playerFrames != null) { for (Texture t : playerFrames) if (t != null) t.dispose(); playerFrames = null; }
         if (backgroundTexture != null) { backgroundTexture.dispose(); backgroundTexture = null; }
+        Texture[] projTex = { texArrow, texBullet, texShuriken, texEnemyBullet, texRocket, texFireball, texPotato, texSword };
+        for (Texture t : projTex) if (t != null) t.dispose();
+        texArrow = texBullet = texShuriken = texEnemyBullet = texRocket = texFireball = texPotato = texSword = null;
+        if (weaponIcons != null) {
+            for (Texture t : weaponIcons.values()) if (t != null) t.dispose();
+            weaponIcons = null;
+        }
+        if (explosionFrames != null) {
+            for (Texture t : explosionFrames) if (t != null) t.dispose();
+            explosionFrames = null;
+        }
         if (hudFont       != null) { hudFont.dispose();       hudFont       = null; }
         if (hudFontBig    != null) { hudFontBig.dispose();    hudFontBig    = null; }
+        if (pauseRetryNormal != null) { pauseRetryNormal.dispose(); pauseRetryNormal = null; }
+        if (pauseRetryHover  != null) { pauseRetryHover.dispose();  pauseRetryHover  = null; }
+        if (pauseQuitNormal  != null) { pauseQuitNormal.dispose();  pauseQuitNormal  = null; }
+        if (pauseQuitHover   != null) { pauseQuitHover.dispose();   pauseQuitHover   = null; }
         player.dispose();
         uiManager.dispose();
     }

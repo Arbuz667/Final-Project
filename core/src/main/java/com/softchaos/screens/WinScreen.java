@@ -3,27 +3,30 @@ package com.softchaos.screens;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.Screen;
-import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.OrthographicCamera;
-import com.badlogic.gdx.graphics.g2d.BitmapFont;
-import com.badlogic.gdx.graphics.g2d.GlyphLayout;
+import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
-import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
+import com.badlogic.gdx.math.Rectangle;
 import com.softchaos.SoftChaosGame;
 import com.softchaos.managers.AudioManager;
 import com.softchaos.managers.GameStateManager;
 import com.softchaos.utils.MusicType;
 
-/** Boss defeated — victory screen. ENTER → main menu. */
+/** Victory screen shown after completing all waves. Click / keyboard to navigate. */
 public class WinScreen implements Screen {
 
+    private static final float BTN_W = 300f, BTN_H = 84f;
+
     private final SoftChaosGame game;
-    private SpriteBatch   batch;
-    private ShapeRenderer shape;
-    private BitmapFont    titleFont;
-    private BitmapFont    bodyFont;
+    private SpriteBatch        batch;
     private OrthographicCamera camera;
+
+    private Texture background;
+    private Texture retryNormal, retryHover;
+    private Texture menuNormal,  menuHover;
+
+    private Rectangle retryHit, menuHit;
 
     public WinScreen(SoftChaosGame game) {
         this.game = game;
@@ -35,79 +38,70 @@ public class WinScreen implements Screen {
         int h = Gdx.graphics.getHeight();
         camera = new OrthographicCamera();
         camera.setToOrtho(false, w, h);
-        batch     = new SpriteBatch();
-        shape     = new ShapeRenderer();
-        titleFont = new BitmapFont();
-        titleFont.getData().setScale(3.5f);
-        bodyFont  = new BitmapFont();
-        bodyFont.getData().setScale(1.8f);
+
+        batch = new SpriteBatch();
+
+        background  = load("screens/victory.png");
+        retryNormal = load("buttons/winner button retry.png");
+        retryHover  = load("buttons/winner button light retry.png");
+        menuNormal  = load("buttons/winner buttons menu.png");
+        menuHover   = load("buttons/winner button light menu.png");
+
+        float cx = w / 2f, cy = h / 2f;
+        retryHit = new Rectangle(cx - BTN_W / 2f, cy - 140f, BTN_W, BTN_H);
+        menuHit  = new Rectangle(cx - BTN_W / 2f, cy - 240f, BTN_W, BTN_H);
+
         AudioManager.getInstance().playMusic(MusicType.WIN);
     }
 
     @Override
     public void render(float delta) {
-        Gdx.gl.glClearColor(0.02f, 0.05f, 0.02f, 1f);
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
 
-        GameStateManager gsm = GameStateManager.getInstance();
-        int   sw  = Gdx.graphics.getWidth();
-        int   sh  = Gdx.graphics.getHeight();
-        float cx  = sw / 2f;
-        float cy  = sh / 2f;
+        int   sw = Gdx.graphics.getWidth();
+        int   sh = Gdx.graphics.getHeight();
+        float mx = Gdx.input.getX();
+        float my = sh - Gdx.input.getY();
 
-        int totalSecs = (int) gsm.sessionTime;
-        String time   = String.format("%02d:%02d", totalSecs / 60, totalSecs % 60);
-
-        Gdx.gl.glEnable(GL20.GL_BLEND);
-        Gdx.gl.glBlendFunc(GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA);
-        shape.setProjectionMatrix(camera.combined);
-        shape.begin(ShapeRenderer.ShapeType.Filled);
-        // Centre panel
-        shape.setColor(0.04f, 0.08f, 0.04f, 0.95f);
-        shape.rect(cx - 280f, cy - 160f, 560f, 360f);
-        // Gold top accent
-        shape.setColor(0.85f, 0.7f, 0.1f, 1f);
-        shape.rect(cx - 280f, cy + 200f, 560f, 8f);
-        shape.end();
-        Gdx.gl.glDisable(GL20.GL_BLEND);
+        boolean overRetry = retryHit.contains(mx, my);
+        boolean overMenu  = menuHit.contains(mx, my);
+        boolean clicked   = Gdx.input.justTouched();
 
         batch.setProjectionMatrix(camera.combined);
         batch.begin();
-
-        // Title
-        titleFont.setColor(new Color(0.95f, 0.85f, 0.2f, 1f));
-        GlyphLayout gl = new GlyphLayout(titleFont, "YOU WIN!");
-        titleFont.draw(batch, "YOU WIN!", cx - gl.width / 2f, cy + 190f);
-
-        // Stats
-        GlyphLayout gl2 = new GlyphLayout();
-        bodyFont.setColor(new Color(0.8f, 0.85f, 0.8f, 1f));
-
-        String[] lines = {
-            "Time survived:  " + time,
-            "Enemies killed: " + gsm.kills,
-            "Level reached:  " + gsm.playerLevel
-        };
-        float lineH  = 44f;
-        float startY = cy + 110f;
-        for (int i = 0; i < lines.length; i++) {
-            gl2.setText(bodyFont, lines[i]);
-            bodyFont.draw(batch, lines[i], cx - gl2.width / 2f, startY - i * lineH);
-        }
-
-        // Button
-        bodyFont.setColor(Color.WHITE);
-        gl2.setText(bodyFont, "[ ENTER ]  Main Menu");
-        bodyFont.draw(batch, "[ ENTER ]  Main Menu", cx - gl2.width / 2f, cy - 80f);
-
+        batch.draw(background, 0, 0, sw, sh);
+        drawBtn(retryNormal, retryHover, overRetry, retryHit);
+        drawBtn(menuNormal,  menuHover,  overMenu,  menuHit);
         batch.end();
 
         AudioManager.getInstance().update(delta);
 
-        if (Gdx.input.isKeyJustPressed(Input.Keys.ENTER)) {
+        if ((clicked && overRetry) || Gdx.input.isKeyJustPressed(Input.Keys.ENTER)) {
+            GameStateManager.getInstance().reset();
+            game.setScreen(new CharacterSelectScreen(game));
+        }
+        if ((clicked && overMenu) || Gdx.input.isKeyJustPressed(Input.Keys.M)) {
             GameStateManager.getInstance().reset();
             game.setScreen(new MainMenuScreen(game));
         }
+    }
+
+    private void drawBtn(Texture normal, Texture hover, boolean isHover, Rectangle hit) {
+        if (!isHover) {
+            batch.draw(normal, hit.x, hit.y, hit.width, hit.height);
+        } else {
+            float drawH = hit.height * ((float) hover.getHeight() / normal.getHeight());
+            batch.draw(hover,
+                hit.x,
+                hit.y + hit.height / 2f - drawH / 2f,
+                hit.width, drawH);
+        }
+    }
+
+    private Texture load(String path) {
+        Texture t = new Texture(Gdx.files.internal(path));
+        t.setFilter(Texture.TextureFilter.Linear, Texture.TextureFilter.Linear);
+        return t;
     }
 
     @Override public void resize(int width, int height) {}
@@ -117,10 +111,13 @@ public class WinScreen implements Screen {
 
     @Override
     public void dispose() {
-        if (batch     != null) { batch.dispose();     batch     = null; }
-        if (shape     != null) { shape.dispose();     shape     = null; }
-        if (titleFont != null) { titleFont.dispose(); titleFont = null; }
-        if (bodyFont  != null) { bodyFont.dispose();  bodyFont  = null; }
+        if (batch       != null) { batch.dispose();       batch       = null; }
+        if (background  != null) { background.dispose();  background  = null; }
+        if (retryNormal != null) { retryNormal.dispose(); retryNormal = null; }
+        if (retryHover  != null) { retryHover.dispose();  retryHover  = null; }
+        if (menuNormal  != null) { menuNormal.dispose();  menuNormal  = null; }
+        if (menuHover   != null) { menuHover.dispose();   menuHover   = null; }
     }
 }
+
 

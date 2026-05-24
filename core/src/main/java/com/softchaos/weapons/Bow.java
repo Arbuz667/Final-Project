@@ -23,6 +23,7 @@ public class Bow extends Weapon {
         piercing        = 0;
         projectileSpeed = 22f;
         explosionRadius = 0f;
+        iconPath        = "weapons/icon iron bow.png";
     }
 
     @Override

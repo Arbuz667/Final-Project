@@ -6,6 +6,7 @@ import com.badlogic.gdx.Screen;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.OrthographicCamera;
+import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.GlyphLayout;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
@@ -50,6 +51,7 @@ public class ChestScreen implements Screen {
     private BitmapFont         titleFont;
     private BitmapFont         bodyFont;
     private OrthographicCamera camera;
+    private Texture[]          choiceIcons;
 
     public ChestScreen(SoftChaosGame game, Chest chest, Player player,
                        ChestSystem chestSystem, Screen returnScreen) {
@@ -101,12 +103,24 @@ public class ChestScreen implements Screen {
         titleFont.getData().setScale(2.2f);
         bodyFont  = new BitmapFont();
         bodyFont.getData().setScale(1.5f);
+
+        // Load icon for each weapon choice
+        choiceIcons = new Texture[choices.size];
+        for (int i = 0; i < choices.size; i++) {
+            choiceIcons[i] = new Texture(Gdx.files.internal(choices.get(i).iconPath));
+            choiceIcons[i].setFilter(Texture.TextureFilter.Linear, Texture.TextureFilter.Linear);
+        }
     }
 
     @Override
     public void render(float delta) {
         int w = Gdx.graphics.getWidth();
         int h = Gdx.graphics.getHeight();
+
+        // Mouse state
+        float mx      = Gdx.input.getX();
+        float my      = h - Gdx.input.getY();
+        boolean clicked = Gdx.input.justTouched();
 
         Gdx.gl.glClearColor(0f, 0f, 0f, 1f);
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
@@ -120,6 +134,20 @@ public class ChestScreen implements Screen {
         float totalW = count * CARD_W + (count - 1) * CARD_GAP;
         float startX = (w - totalW) / 2f;
         float cardY  = (h - CARD_H) / 2f;
+
+        // Detect hovered card
+        int hoveredCard = -1;
+        for (int i = 0; i < count; i++) {
+            float cx = startX + i * (CARD_W + CARD_GAP);
+            if (mx >= cx && mx <= cx + CARD_W && my >= cardY && my <= cardY + CARD_H)
+                hoveredCard = i;
+        }
+
+        // Skip button geometry
+        float skipW = 200f, skipH = 46f;
+        float skipX = (w - skipW) / 2f;
+        float skipY = cardY - 78f;
+        boolean overSkip = mx >= skipX && mx <= skipX + skipW && my >= skipY && my <= skipY + skipH;
 
         shape.setProjectionMatrix(camera.combined);
 
@@ -137,6 +165,12 @@ public class ChestScreen implements Screen {
             shape.setColor(0.12f, 0.12f, 0.18f, 1f);
             shape.rect(cx, cardY, CARD_W, CARD_H);
 
+            // Hover overlay
+            if (i == hoveredCard) {
+                shape.setColor(1f, 1f, 1f, 0.07f);
+                shape.rect(cx, cardY, CARD_W, CARD_H);
+            }
+
             Color rc = rarityColor(c.rarity);
             shape.setColor(rc);
             shape.rect(cx, cardY + CARD_H - 12f, CARD_W, 12f);
@@ -144,6 +178,11 @@ public class ChestScreen implements Screen {
             shape.setColor(rc);
             shape.circle(cx + CARD_W / 2f, cardY + CARD_H + 30f, 22f, 32);
         }
+
+        // Skip button
+        shape.setColor(overSkip ? new Color(0.75f, 0.25f, 0.25f, 0.9f)
+                                : new Color(0.2f,  0.2f,  0.25f, 0.8f));
+        shape.rect(skipX, skipY, skipW, skipH);
         shape.end();
 
         // --- Card borders ---
@@ -151,9 +190,11 @@ public class ChestScreen implements Screen {
         for (int i = 0; i < count; i++) {
             Weapon c  = choices.get(i);
             float  cx = startX + i * (CARD_W + CARD_GAP);
-            shape.setColor(rarityColor(c.rarity));
+            shape.setColor(i == hoveredCard ? Color.WHITE : rarityColor(c.rarity));
             shape.rect(cx, cardY, CARD_W, CARD_H);
         }
+        shape.setColor(overSkip ? Color.WHITE : new Color(0.5f, 0.5f, 0.5f, 1f));
+        shape.rect(skipX, skipY, skipW, skipH);
         shape.end();
         Gdx.gl.glDisable(GL20.GL_BLEND);
 
@@ -183,6 +224,13 @@ public class ChestScreen implements Screen {
             layout.setText(titleFont, c.name);
             titleFont.draw(batch, c.name, cx + (CARD_W - layout.width) / 2f, cardY + CARD_H - 55f);
 
+            // Weapon icon in lower half of card
+            if (i < choiceIcons.length && choiceIcons[i] != null) {
+                float iconSz = 140f;
+                batch.draw(choiceIcons[i],
+                    cx + (CARD_W - iconSz) / 2f, cardY + 40f, iconSz, iconSz);
+            }
+
             bodyFont.setColor(new Color(0.4f, 0.4f, 0.4f, 1f));
             bodyFont.draw(batch, "- - - - - - - -", cx + 10f, cardY + CARD_H - 98f);
 
@@ -193,15 +241,27 @@ public class ChestScreen implements Screen {
             bodyFont.draw(batch, stats, cx + (CARD_W - layout.width) / 2f, cardY + CARD_H - 122f);
         }
 
+        // Skip button text
+        bodyFont.setColor(Color.WHITE);
+        layout.setText(bodyFont, "SKIP");
+        bodyFont.draw(batch, "SKIP", skipX + (skipW - layout.width) / 2f, skipY + skipH - 10f);
+
         bodyFont.setColor(new Color(0.5f, 0.5f, 0.5f, 1f));
-        bodyFont.draw(batch, "1 / 2 / 3  to take    ESC  to skip", w / 2f - 170f, cardY - 30f);
+        bodyFont.draw(batch, "1 / 2 / 3  or click  |  ESC or Skip to cancel", w / 2f - 185f, cardY - 30f);
 
         batch.end();
 
+        // Input — keyboard
         if (Gdx.input.isKeyJustPressed(Input.Keys.NUM_1) && count > 0) pick(0);
         if (Gdx.input.isKeyJustPressed(Input.Keys.NUM_2) && count > 1) pick(1);
         if (Gdx.input.isKeyJustPressed(Input.Keys.NUM_3) && count > 2) pick(2);
         if (Gdx.input.isKeyJustPressed(Input.Keys.ESCAPE))             returnToGame();
+
+        // Input — mouse
+        if (clicked) {
+            if (hoveredCard >= 0 && hoveredCard < count) pick(hoveredCard);
+            else if (overSkip)                           returnToGame();
+        }
     }
 
     private void pick(int i) {
@@ -235,5 +295,9 @@ public class ChestScreen implements Screen {
         if (shape     != null) { shape.dispose();     shape     = null; }
         if (titleFont != null) { titleFont.dispose(); titleFont = null; }
         if (bodyFont  != null) { bodyFont.dispose();  bodyFont  = null; }
+        if (choiceIcons != null) {
+            for (Texture t : choiceIcons) if (t != null) t.dispose();
+            choiceIcons = null;
+        }
     }
 }

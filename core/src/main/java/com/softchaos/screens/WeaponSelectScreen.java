@@ -72,7 +72,7 @@ public class WeaponSelectScreen implements Screen {
         layout     = new GlyphLayout();
         font.getData().setScale(1.5f);
         fontBig.getData().setScale(2.4f);
-        background = new Texture(Gdx.files.internal("main_menu.png"));
+        background = new Texture(Gdx.files.internal("screens/main_menu.png"));
         background.setFilter(Texture.TextureFilter.Linear, Texture.TextureFilter.Linear);
     }
 

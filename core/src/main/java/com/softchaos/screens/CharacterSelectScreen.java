@@ -52,6 +52,12 @@ public class CharacterSelectScreen implements Screen {
 
     private int hovered = -1;
 
+    // Character sprite animation
+    private Texture[][] charFrames;
+    private float animTimer = 0f;
+    private int   animFrame = 0;
+    private static final float CHAR_FRAME_DUR = 0.25f;
+
     public CharacterSelectScreen(SoftChaosGame game) {
         this.game    = game;
         this.weapons = new Weapon[]{ new Sword(), new Bow(), new Diary() };
@@ -68,12 +74,38 @@ public class CharacterSelectScreen implements Screen {
         layout     = new GlyphLayout();
         font.getData().setScale(1.5f);
         fontBig.getData().setScale(2.4f);
-        background = new Texture(Gdx.files.internal("main_menu.png"));
+        background = new Texture(Gdx.files.internal("screens/main_menu.png"));
         background.setFilter(Texture.TextureFilter.Linear, Texture.TextureFilter.Linear);
+
+        charFrames = new Texture[3][];
+        charFrames[0] = new Texture[]{
+            new Texture(Gdx.files.internal("characters/Warrior.png")),
+            new Texture(Gdx.files.internal("characters/Warrior left leg.png")),
+            new Texture(Gdx.files.internal("characters/Warrior\u00a0right leg.png"))
+        };
+        charFrames[1] = new Texture[]{
+            new Texture(Gdx.files.internal("characters/elf straight.png")),
+            new Texture(Gdx.files.internal("characters/elf left .png")),
+            new Texture(Gdx.files.internal("characters/elf right.png"))
+        };
+        charFrames[2] = new Texture[]{
+            new Texture(Gdx.files.internal("characters/witch.png")),
+            new Texture(Gdx.files.internal("characters/withc left.png"))
+        };
+        for (Texture[] frames : charFrames)
+            for (Texture t : frames)
+                t.setFilter(Texture.TextureFilter.Nearest, Texture.TextureFilter.Nearest);
     }
 
     @Override
     public void render(float delta) {
+        // Advance animation timer
+        animTimer += delta;
+        if (animTimer >= CHAR_FRAME_DUR) {
+            animTimer -= CHAR_FRAME_DUR;
+            animFrame++;
+        }
+
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
         camera.update();
 
@@ -160,24 +192,32 @@ public class CharacterSelectScreen implements Screen {
             layout.setText(fontBig, NAMES[i]);
             fontBig.draw(batch, NAMES[i], cx + (CARD_W - layout.width) / 2f, cardY + CARD_H - 48f);
 
+            // Character sprite (animated)
+            Texture[] frames = charFrames[i];
+            Texture   frame  = frames[animFrame % frames.length];
+            float spriteSize = 110f;
+            float spriteX    = cx + (CARD_W - spriteSize) / 2f;
+            float spriteY    = cardY + CARD_H - 166f;
+            batch.draw(frame, spriteX, spriteY, spriteSize, spriteSize);
+
             // Divider
             font.getData().setScale(1.0f);
             font.setColor(0.3f, 0.3f, 0.42f, 1f);
-            font.draw(batch, "- - - - - - - - - - -", cx + 10f, cardY + CARD_H - 104f);
+            font.draw(batch, "- - - - - - - - - - -", cx + 10f, cardY + CARD_H - 170f);
 
             // Flavor description (multi-line manual)
-            font.getData().setScale(1.25f);
+            font.getData().setScale(1.15f);
             font.setColor(0.75f, 0.75f, 0.80f, 1f);
             String[] lines = FLAVOR[i].split("\n");
-            float lineH = 28f;
-            float descY = cardY + CARD_H - 128f;
+            float lineH = 24f;
+            float descY = cardY + CARD_H - 185f;
             for (String line : lines) {
                 font.draw(batch, line, cx + 14f, descY);
                 descY -= lineH;
             }
 
             // Starting weapon section
-            float weapY = cardY + 160f;
+            float weapY = cardY + 128f;
             font.getData().setScale(1.1f);
             font.setColor(0.45f, 0.45f, 0.52f, 1f);
             font.draw(batch, "--- Starting Weapon ---", cx + 6f, weapY);
@@ -235,5 +275,10 @@ public class CharacterSelectScreen implements Screen {
         if (font       != null) { font.dispose();       font       = null; }
         if (fontBig    != null) { fontBig.dispose();    fontBig    = null; }
         if (background != null) { background.dispose(); background = null; }
+        if (charFrames != null) {
+            for (Texture[] frames : charFrames)
+                for (Texture t : frames) if (t != null) t.dispose();
+            charFrames = null;
+        }
     }
 }
