@@ -16,6 +16,7 @@ public class WeaponSystem {
     public void update(float delta, Player player, Array<Enemy> enemies,
                        Array<Projectile> projectiles) {
         for (Weapon w : player.weapons) {
+            w.tickPassive(delta, player, enemies);
             w.update(delta);
             if (w.canFire() && !enemies.isEmpty()) {
                 w.fire(player, enemies, projectiles);
@@ -27,8 +28,13 @@ public class WeaponSystem {
     public void applyUpgrade(Weapon w, UpgradeConfig upgrade) {
         w.damage          *= upgrade.damageMultiplier;
         w.cooldown        *= upgrade.cooldownMultiplier;
-        w.size            *= upgrade.sizeMultiplier;
-        w.explosionRadius *= upgrade.sizeMultiplier;
+        // For explosion weapons: size upgrade scales blast radius only (keeps projectile sprite constant).
+        // For non-explosion weapons (e.g. sword): size upgrade scales the hitbox/sprite.
+        if (w.explosionRadius > 0) {
+            w.explosionRadius *= upgrade.sizeMultiplier;
+        } else {
+            w.size            *= upgrade.sizeMultiplier;
+        }
         w.projectileCount += upgrade.projectileCountAdd;
         w.piercing        += upgrade.piercingAdd;
         // TODO M3: handle specialEffect string

@@ -52,6 +52,12 @@ public class CharacterSelectScreen implements Screen {
 
     private int hovered = -1;
 
+    // Fade-out transition
+    private boolean fading     = false;
+    private float   fadeAlpha  = 0f;
+    private int     pendingPick = -1;
+    private static final float FADE_SPEED = 1.8f;
+
     // Character sprite animation
     private Texture[][] charFrames;
     private float animTimer = 0f;
@@ -73,7 +79,11 @@ public class CharacterSelectScreen implements Screen {
         fontBig    = new BitmapFont();
         layout     = new GlyphLayout();
         font.getData().setScale(1.5f);
+        font.setUseIntegerPositions(false);
+        font.getRegion().getTexture().setFilter(Texture.TextureFilter.Linear, Texture.TextureFilter.Linear);
         fontBig.getData().setScale(2.4f);
+        fontBig.setUseIntegerPositions(false);
+        fontBig.getRegion().getTexture().setFilter(Texture.TextureFilter.Linear, Texture.TextureFilter.Linear);
         background = new Texture(Gdx.files.internal("screens/main_menu.png"));
         background.setFilter(Texture.TextureFilter.Linear, Texture.TextureFilter.Linear);
 
@@ -104,6 +114,16 @@ public class CharacterSelectScreen implements Screen {
         if (animTimer >= CHAR_FRAME_DUR) {
             animTimer -= CHAR_FRAME_DUR;
             animFrame++;
+        }
+
+        // Fade-out: advance alpha and switch when complete
+        if (fading) {
+            fadeAlpha += FADE_SPEED * delta;
+            if (fadeAlpha >= 1f) {
+                fadeAlpha = 1f;
+                launchGame(pendingPick);
+                return;
+            }
         }
 
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
@@ -190,7 +210,7 @@ public class CharacterSelectScreen implements Screen {
             fontBig.getData().setScale(1.9f);
             fontBig.setColor(c[0], c[1], c[2], 1f);
             layout.setText(fontBig, NAMES[i]);
-            fontBig.draw(batch, NAMES[i], cx + (CARD_W - layout.width) / 2f, cardY + CARD_H - 48f);
+            fontBig.draw(batch, NAMES[i], cx + (CARD_W - layout.width) / 2f, cardY + CARD_H - 30f);
 
             // Character sprite (animated)
             Texture[] frames = charFrames[i];
@@ -242,14 +262,32 @@ public class CharacterSelectScreen implements Screen {
 
         batch.end();
 
+        // Fade overlay
+        if (fading && fadeAlpha > 0f) {
+            Gdx.gl.glEnable(GL20.GL_BLEND);
+            Gdx.gl.glBlendFunc(GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA);
+            shape.setProjectionMatrix(camera.combined);
+            shape.begin(ShapeRenderer.ShapeType.Filled);
+            shape.setColor(0f, 0f, 0f, fadeAlpha);
+            shape.rect(0, 0, sw, sh);
+            shape.end();
+            Gdx.gl.glDisable(GL20.GL_BLEND);
+        }
+
         // ── Input ─────────────────────────────────────────────────────
-        if (Gdx.input.justTouched() && hovered >= 0) pick(hovered);
-        if (Gdx.input.isKeyJustPressed(Input.Keys.NUM_1)) pick(0);
-        if (Gdx.input.isKeyJustPressed(Input.Keys.NUM_2)) pick(1);
-        if (Gdx.input.isKeyJustPressed(Input.Keys.NUM_3)) pick(2);
+        if (!fading && Gdx.input.justTouched() && hovered >= 0) pick(hovered);
+        if (!fading && Gdx.input.isKeyJustPressed(Input.Keys.NUM_1)) pick(0);
+        if (!fading && Gdx.input.isKeyJustPressed(Input.Keys.NUM_2)) pick(1);
+        if (!fading && Gdx.input.isKeyJustPressed(Input.Keys.NUM_3)) pick(2);
     }
 
     private void pick(int index) {
+        fading      = true;
+        fadeAlpha   = 0f;
+        pendingPick = index;
+    }
+
+    private void launchGame(int index) {
         GameStateManager gsm = GameStateManager.getInstance();
         gsm.reset();
         gsm.selectedCharacter = index;

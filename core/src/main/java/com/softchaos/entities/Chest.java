@@ -15,7 +15,7 @@ public class Chest {
     public Rectangle hitbox;
 
     public Chest() {
-        hitbox = new Rectangle(0, 0, 0.8f, 0.8f);
+        hitbox = new Rectangle(0, 0, 1.6f, 1.6f);
         open = false;
     }
 

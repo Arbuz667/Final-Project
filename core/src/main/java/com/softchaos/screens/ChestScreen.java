@@ -6,6 +6,7 @@ import com.badlogic.gdx.Screen;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.OrthographicCamera;
+import com.badlogic.gdx.graphics.Pixmap;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.GlyphLayout;
@@ -26,6 +27,7 @@ import com.softchaos.weapons.PotatoThrower;
 import com.softchaos.weapons.Shurikens;
 import com.softchaos.weapons.Sword;
 import com.softchaos.weapons.Weapon;
+import com.softchaos.weapons.cringe.SixSeven;
 
 /**
  * Mid-run weapon selection screen shown when a chest is opened.
@@ -51,6 +53,8 @@ public class ChestScreen implements Screen {
     private BitmapFont         titleFont;
     private BitmapFont         bodyFont;
     private OrthographicCamera camera;
+    private Texture            bgSnapshot;
+    private Texture            chestTexture;
     private Texture[]          choiceIcons;
 
     public ChestScreen(SoftChaosGame game, Chest chest, Player player,
@@ -74,6 +78,7 @@ public class ChestScreen implements Screen {
         pool.add(new Minigun());
         pool.add(new PotatoThrower());
         pool.add(new NuclearBazooka());
+        pool.add(new SixSeven());
 
         // Remove weapons the player already owns
         for (int i = pool.size - 1; i >= 0; i--) {
@@ -100,9 +105,13 @@ public class ChestScreen implements Screen {
         batch     = new SpriteBatch();
         shape     = new ShapeRenderer();
         titleFont = new BitmapFont();
-        titleFont.getData().setScale(2.2f);
+        titleFont.getData().setScale(1.9f);
+        titleFont.setUseIntegerPositions(false);
+        titleFont.getRegion().getTexture().setFilter(Texture.TextureFilter.Linear, Texture.TextureFilter.Linear);
         bodyFont  = new BitmapFont();
         bodyFont.getData().setScale(1.5f);
+        bodyFont.setUseIntegerPositions(false);
+        bodyFont.getRegion().getTexture().setFilter(Texture.TextureFilter.Linear, Texture.TextureFilter.Linear);
 
         // Load icon for each weapon choice
         choiceIcons = new Texture[choices.size];
@@ -110,6 +119,14 @@ public class ChestScreen implements Screen {
             choiceIcons[i] = new Texture(Gdx.files.internal(choices.get(i).iconPath));
             choiceIcons[i].setFilter(Texture.TextureFilter.Linear, Texture.TextureFilter.Linear);
         }
+
+        // Capture current game frame for semi-transparent background
+        Pixmap pm = Pixmap.createFromFrameBuffer(0, 0, w, h);
+        bgSnapshot = new Texture(pm);
+        pm.dispose();
+
+        chestTexture = new Texture(Gdx.files.internal("chest.png"));
+        chestTexture.setFilter(Texture.TextureFilter.Linear, Texture.TextureFilter.Linear);
     }
 
     @Override
@@ -124,6 +141,20 @@ public class ChestScreen implements Screen {
 
         Gdx.gl.glClearColor(0f, 0f, 0f, 1f);
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
+        if (bgSnapshot != null) {
+            batch.setProjectionMatrix(camera.combined);
+            batch.begin();
+            batch.draw(bgSnapshot, 0, 0, w, h, 0, 0, w, h, false, true);
+            batch.end();
+        }
+        Gdx.gl.glEnable(GL20.GL_BLEND);
+        Gdx.gl.glBlendFunc(GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA);
+        shape.setProjectionMatrix(camera.combined);
+        shape.begin(ShapeRenderer.ShapeType.Filled);
+        shape.setColor(0f, 0f, 0f, 0.65f);
+        shape.rect(0, 0, w, h);
+        shape.end();
+        Gdx.gl.glDisable(GL20.GL_BLEND);
 
         if (choices.isEmpty()) {
             returnToGame();
@@ -146,7 +177,7 @@ public class ChestScreen implements Screen {
         // Skip button geometry
         float skipW = 200f, skipH = 46f;
         float skipX = (w - skipW) / 2f;
-        float skipY = cardY - 78f;
+        float skipY = cardY - 108f;
         boolean overSkip = mx >= skipX && mx <= skipX + skipW && my >= skipY && my <= skipY + skipH;
 
         shape.setProjectionMatrix(camera.combined);
@@ -204,9 +235,15 @@ public class ChestScreen implements Screen {
         GlyphLayout layout = new GlyphLayout();
 
         titleFont.setColor(Color.GOLD);
-        titleFont.draw(batch, "CHEST OPENED!", w / 2f - 110f, cardY + CARD_H + 90f);
+        layout.setText(titleFont, "CHEST OPENED!");
+        titleFont.draw(batch, "CHEST OPENED!", (w - layout.width) / 2f, cardY + CARD_H + 110f);
+        if (chestTexture != null) {
+            float csz = 56f;
+            batch.draw(chestTexture, (w - csz) / 2f, cardY + CARD_H + 118f, csz, csz);
+        }
         bodyFont.setColor(Color.LIGHT_GRAY);
-        bodyFont.draw(batch, "Choose a new weapon", w / 2f - 120f, cardY + CARD_H + 58f);
+        layout.setText(bodyFont, "Choose a new weapon");
+        bodyFont.draw(batch, "Choose a new weapon", (w - layout.width) / 2f, cardY + CARD_H + 76f);
 
         for (int i = 0; i < count; i++) {
             Weapon c  = choices.get(i);
@@ -218,27 +255,27 @@ public class ChestScreen implements Screen {
             String rarityName = c.rarity != null ? c.rarity.name() : "COMMON";
             bodyFont.setColor(rarityColor(c.rarity));
             layout.setText(bodyFont, rarityName);
-            bodyFont.draw(batch, rarityName, cx + (CARD_W - layout.width) / 2f, cardY + CARD_H - 20f);
+            bodyFont.draw(batch, rarityName, cx + (CARD_W - layout.width) / 2f, cardY + CARD_H - 30f);
 
             titleFont.setColor(Color.WHITE);
             layout.setText(titleFont, c.name);
-            titleFont.draw(batch, c.name, cx + (CARD_W - layout.width) / 2f, cardY + CARD_H - 55f);
+            titleFont.draw(batch, c.name, cx + (CARD_W - layout.width) / 2f, cardY + CARD_H - 72f);
 
             // Weapon icon in lower half of card
             if (i < choiceIcons.length && choiceIcons[i] != null) {
-                float iconSz = 140f;
+                float iconSz = 110f;
                 batch.draw(choiceIcons[i],
-                    cx + (CARD_W - iconSz) / 2f, cardY + 40f, iconSz, iconSz);
+                    cx + (CARD_W - iconSz) / 2f, cardY + 20f, iconSz, iconSz);
             }
 
             bodyFont.setColor(new Color(0.4f, 0.4f, 0.4f, 1f));
-            bodyFont.draw(batch, "- - - - - - - -", cx + 10f, cardY + CARD_H - 98f);
+            bodyFont.draw(batch, "- - - - - - - -", cx + 10f, cardY + CARD_H - 122f);
 
             String stats = String.format("DMG %.0f   CD %.1fs   x%d proj",
                 c.damage, c.cooldown, c.projectileCount);
             bodyFont.setColor(Color.YELLOW);
             layout.setText(bodyFont, stats);
-            bodyFont.draw(batch, stats, cx + (CARD_W - layout.width) / 2f, cardY + CARD_H - 122f);
+            bodyFont.draw(batch, stats, cx + (CARD_W - layout.width) / 2f, cardY + CARD_H - 165f);
         }
 
         // Skip button text
@@ -247,7 +284,9 @@ public class ChestScreen implements Screen {
         bodyFont.draw(batch, "SKIP", skipX + (skipW - layout.width) / 2f, skipY + skipH - 10f);
 
         bodyFont.setColor(new Color(0.5f, 0.5f, 0.5f, 1f));
-        bodyFont.draw(batch, "1 / 2 / 3  or click  |  ESC or Skip to cancel", w / 2f - 185f, cardY - 30f);
+        String hintChest = "1 / 2 / 3  or click  |  ESC or Skip to cancel";
+        layout.setText(bodyFont, hintChest);
+        bodyFont.draw(batch, hintChest, (w - layout.width) / 2f, cardY - 20f);
 
         batch.end();
 
@@ -291,10 +330,12 @@ public class ChestScreen implements Screen {
 
     @Override
     public void dispose() {
-        if (batch     != null) { batch.dispose();     batch     = null; }
-        if (shape     != null) { shape.dispose();     shape     = null; }
-        if (titleFont != null) { titleFont.dispose(); titleFont = null; }
-        if (bodyFont  != null) { bodyFont.dispose();  bodyFont  = null; }
+        if (batch      != null) { batch.dispose();      batch      = null; }
+        if (shape      != null) { shape.dispose();      shape      = null; }
+        if (titleFont  != null) { titleFont.dispose();  titleFont  = null; }
+        if (bodyFont   != null) { bodyFont.dispose();   bodyFont   = null; }
+        if (bgSnapshot != null) { bgSnapshot.dispose(); bgSnapshot = null; }
+        if (chestTexture != null) { chestTexture.dispose(); chestTexture = null; }
         if (choiceIcons != null) {
             for (Texture t : choiceIcons) if (t != null) t.dispose();
             choiceIcons = null;

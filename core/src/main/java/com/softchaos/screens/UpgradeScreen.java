@@ -6,6 +6,8 @@ import com.badlogic.gdx.Screen;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.OrthographicCamera;
+import com.badlogic.gdx.graphics.Pixmap;
+import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.GlyphLayout;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
@@ -30,11 +32,12 @@ public class UpgradeScreen implements Screen {
     private final UpgradeSystem        upgradeSystem;
     private final Array<UpgradeConfig> choices;
 
-    private SpriteBatch   batch;
-    private ShapeRenderer shape;
-    private BitmapFont    titleFont;
-    private BitmapFont    bodyFont;
+    private SpriteBatch        batch;
+    private ShapeRenderer      shape;
+    private BitmapFont         titleFont;
+    private BitmapFont         bodyFont;
     private OrthographicCamera camera;
+    private Texture            bgSnapshot;
 
     public UpgradeScreen(SoftChaosGame game, Weapon weapon,
                          UpgradeSystem upgradeSystem, Screen returnScreen) {
@@ -56,9 +59,18 @@ public class UpgradeScreen implements Screen {
         batch     = new SpriteBatch();
         shape     = new ShapeRenderer();
         titleFont = new BitmapFont();
-        titleFont.getData().setScale(2.2f);
+        titleFont.getData().setScale(1.9f);
+        titleFont.setUseIntegerPositions(false);
+        titleFont.getRegion().getTexture().setFilter(Texture.TextureFilter.Linear, Texture.TextureFilter.Linear);
         bodyFont  = new BitmapFont();
         bodyFont.getData().setScale(1.5f);
+        bodyFont.setUseIntegerPositions(false);
+        bodyFont.getRegion().getTexture().setFilter(Texture.TextureFilter.Linear, Texture.TextureFilter.Linear);
+
+        // Capture current game frame for semi-transparent background
+        Pixmap pm = Pixmap.createFromFrameBuffer(0, 0, w, h);
+        bgSnapshot = new Texture(pm);
+        pm.dispose();
     }
 
     @Override
@@ -71,11 +83,22 @@ public class UpgradeScreen implements Screen {
         float my      = h - Gdx.input.getY();
         boolean clicked = Gdx.input.justTouched();
 
-        // Dark overlay
-        Gdx.gl.glEnable(GL20.GL_BLEND);
-        Gdx.gl.glBlendFunc(GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA);
+        // Draw captured game frame + semi-transparent dark overlay
         Gdx.gl.glClearColor(0f, 0f, 0f, 1f);
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
+        if (bgSnapshot != null) {
+            batch.setProjectionMatrix(camera.combined);
+            batch.begin();
+            batch.draw(bgSnapshot, 0, 0, w, h, 0, 0, w, h, false, true);
+            batch.end();
+        }
+        Gdx.gl.glEnable(GL20.GL_BLEND);
+        Gdx.gl.glBlendFunc(GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA);
+        shape.setProjectionMatrix(camera.combined);
+        shape.begin(ShapeRenderer.ShapeType.Filled);
+        shape.setColor(0f, 0f, 0f, 0.65f);
+        shape.rect(0, 0, w, h);
+        shape.end();
 
         if (choices.isEmpty()) { returnToGame(); return; }
 
@@ -95,7 +118,7 @@ public class UpgradeScreen implements Screen {
         // Skip button geometry
         float skipW = 200f, skipH = 46f;
         float skipX = (w - skipW) / 2f;
-        float skipY = cardY - 78f;
+        float skipY = cardY - 108f;
         boolean overSkip = mx >= skipX && mx <= skipX + skipW && my >= skipY && my <= skipY + skipH;
 
         shape.setProjectionMatrix(camera.combined);
@@ -157,9 +180,12 @@ public class UpgradeScreen implements Screen {
 
         // Header
         titleFont.setColor(Color.WHITE);
-        titleFont.draw(batch, "LEVEL UP!", w / 2f - 80f, cardY + CARD_H + 90f);
+        layout.setText(titleFont, "LEVEL UP!");
+        titleFont.draw(batch, "LEVEL UP!", (w - layout.width) / 2f, cardY + CARD_H + 110f);
         bodyFont.setColor(Color.LIGHT_GRAY);
-        bodyFont.draw(batch, "Choose an upgrade for: " + weapon.name, w / 2f - 160f, cardY + CARD_H + 58f);
+        String subTitle = "Choose an upgrade for: " + weapon.name;
+        layout.setText(bodyFont, subTitle);
+        bodyFont.draw(batch, subTitle, (w - layout.width) / 2f, cardY + CARD_H + 76f);
 
         for (int i = 0; i < count; i++) {
             UpgradeConfig c = choices.get(i);
@@ -175,13 +201,13 @@ public class UpgradeScreen implements Screen {
             // Rarity label
             bodyFont.setColor(rarityColor(c.rarity));
             layout.setText(bodyFont, c.rarity.name());
-            bodyFont.draw(batch, c.rarity.name(), cx + (CARD_W - layout.width) / 2f, cardY + CARD_H - 20f);
+            bodyFont.draw(batch, c.rarity.name(), cx + (CARD_W - layout.width) / 2f, cardY + CARD_H - 30f);
 
             // Upgrade name
             titleFont.setColor(Color.WHITE);
             layout.setText(titleFont, upgradeName);
             float nameX = cx + (CARD_W - layout.width) / 2f;
-            titleFont.draw(batch, upgradeName, nameX, cardY + CARD_H - 55f);
+            titleFont.draw(batch, upgradeName, nameX, cardY + CARD_H - 72f);
 
             // LVL indicator  e.g.  "LVL 2 / 3"
             int picked = upgradeSystem.getPickedCount(c);
@@ -192,16 +218,16 @@ public class UpgradeScreen implements Screen {
                 : new Color(0.4f, 1f, 0.4f, 1f);
             bodyFont.setColor(lvlColor);
             layout.setText(bodyFont, lvlStr);
-            bodyFont.draw(batch, lvlStr, cx + (CARD_W - layout.width) / 2f, cardY + CARD_H - 78f);
+            bodyFont.draw(batch, lvlStr, cx + (CARD_W - layout.width) / 2f, cardY + CARD_H - 122f);
 
             // Divider hint
             bodyFont.setColor(new Color(0.4f, 0.4f, 0.4f, 1f));
-            bodyFont.draw(batch, "- - - - - - - -", cx + 10f, cardY + CARD_H - 98f);
+            bodyFont.draw(batch, "- - - - - - - -", cx + 10f, cardY + CARD_H - 164f);
 
             // Stat line
             bodyFont.setColor(Color.YELLOW);
             layout.setText(bodyFont, statLine);
-            bodyFont.draw(batch, statLine, cx + (CARD_W - layout.width) / 2f, cardY + CARD_H - 122f);
+            bodyFont.draw(batch, statLine, cx + (CARD_W - layout.width) / 2f, cardY + CARD_H - 206f);
         }
 
         // Skip button text
@@ -211,7 +237,9 @@ public class UpgradeScreen implements Screen {
 
         // Footer hint
         bodyFont.setColor(new Color(0.5f, 0.5f, 0.5f, 1f));
-        bodyFont.draw(batch, "1 / 2 / 3  or click card  |  ESC or Skip to cancel", w / 2f - 210f, cardY - 30f);
+        String hintUpg = "1 / 2 / 3  or click card  |  ESC or Skip to cancel";
+        layout.setText(bodyFont, hintUpg);
+        bodyFont.draw(batch, hintUpg, (w - layout.width) / 2f, cardY - 20f);
 
         batch.end();
 
@@ -254,10 +282,11 @@ public class UpgradeScreen implements Screen {
 
     @Override
     public void dispose() {
-        if (batch     != null) { batch.dispose();     batch     = null; }
-        if (shape     != null) { shape.dispose();     shape     = null; }
-        if (titleFont != null) { titleFont.dispose(); titleFont = null; }
-        if (bodyFont  != null) { bodyFont.dispose();  bodyFont  = null; }
+        if (batch      != null) { batch.dispose();      batch      = null; }
+        if (shape      != null) { shape.dispose();      shape      = null; }
+        if (titleFont  != null) { titleFont.dispose();  titleFont  = null; }
+        if (bodyFont   != null) { bodyFont.dispose();   bodyFont   = null; }
+        if (bgSnapshot != null) { bgSnapshot.dispose(); bgSnapshot = null; }
     }
 }
 

@@ -216,18 +216,23 @@ public class EnemySpawner {
                 boss.maxHp  = 7500f;
                 boss.speed  = 3f;
                 boss.damage = 15f;
+                boss.type   = EnemyType.MEGALODON;
+                boss.knockbackImmune = true;
                 break;
             case SPACE:
                 boss.ai     = new PickleRickAI();
                 boss.maxHp  = 13500f;
                 boss.speed  = 4.5f;
                 boss.damage = 17.5f;
+                boss.type   = EnemyType.PICKLE_RICK;
+                boss.knockbackImmune = true;
                 break;
             default: // FOREST
                 boss.ai     = new SlendermanAI();
                 boss.maxHp  = 5000f;
                 boss.speed  = 2f;
                 boss.damage = 10f;
+                boss.type   = EnemyType.SLENDERMAN;
                 break;
         }
         boss.hp              = boss.maxHp;

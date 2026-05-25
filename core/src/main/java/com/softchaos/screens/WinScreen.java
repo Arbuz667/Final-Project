@@ -6,6 +6,7 @@ import com.badlogic.gdx.Screen;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.Texture;
+import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.math.Rectangle;
 import com.softchaos.SoftChaosGame;
@@ -17,9 +18,11 @@ import com.softchaos.utils.MusicType;
 public class WinScreen implements Screen {
 
     private static final float BTN_W = 300f, BTN_H = 84f;
+    private static final float FADE_SPEED = 1.8f;
 
     private final SoftChaosGame game;
     private SpriteBatch        batch;
+    private ShapeRenderer      shape;
     private OrthographicCamera camera;
 
     private Texture background;
@@ -27,6 +30,10 @@ public class WinScreen implements Screen {
     private Texture menuNormal,  menuHover;
 
     private Rectangle retryHit, menuHit;
+
+    private float    fadeAlpha = 1f;   // 1 = black; fades to 0 on show
+    private boolean  fadingOut = false;
+    private Runnable pendingTransition;
 
     public WinScreen(SoftChaosGame game) {
         this.game = game;
@@ -40,6 +47,7 @@ public class WinScreen implements Screen {
         camera.setToOrtho(false, w, h);
 
         batch = new SpriteBatch();
+        shape = new ShapeRenderer();
 
         background  = load("screens/victory.png");
         retryNormal = load("buttons/winner button retry.png");
@@ -63,9 +71,22 @@ public class WinScreen implements Screen {
         float mx = Gdx.input.getX();
         float my = sh - Gdx.input.getY();
 
-        boolean overRetry = retryHit.contains(mx, my);
-        boolean overMenu  = menuHit.contains(mx, my);
-        boolean clicked   = Gdx.input.justTouched();
+        // Update fade
+        if (fadingOut) {
+            fadeAlpha = Math.min(1f, fadeAlpha + FADE_SPEED * delta);
+            if (fadeAlpha >= 1f && pendingTransition != null) {
+                Runnable r = pendingTransition;
+                pendingTransition = null;
+                r.run();
+                return;
+            }
+        } else {
+            fadeAlpha = Math.max(0f, fadeAlpha - FADE_SPEED * delta);
+        }
+
+        boolean overRetry = !fadingOut && retryHit.contains(mx, my);
+        boolean overMenu  = !fadingOut && menuHit.contains(mx, my);
+        boolean clicked   = !fadingOut && Gdx.input.justTouched();
 
         batch.setProjectionMatrix(camera.combined);
         batch.begin();
@@ -74,15 +95,34 @@ public class WinScreen implements Screen {
         drawBtn(menuNormal,  menuHover,  overMenu,  menuHit);
         batch.end();
 
+        // Black fade overlay
+        if (fadeAlpha > 0f) {
+            Gdx.gl.glEnable(GL20.GL_BLEND);
+            shape.setProjectionMatrix(camera.combined);
+            shape.begin(ShapeRenderer.ShapeType.Filled);
+            shape.setColor(0f, 0f, 0f, fadeAlpha);
+            shape.rect(0, 0, sw, sh);
+            shape.end();
+            Gdx.gl.glDisable(GL20.GL_BLEND);
+        }
+
         AudioManager.getInstance().update(delta);
 
-        if ((clicked && overRetry) || Gdx.input.isKeyJustPressed(Input.Keys.ENTER)) {
-            GameStateManager.getInstance().reset();
-            game.setScreen(new CharacterSelectScreen(game));
-        }
-        if ((clicked && overMenu) || Gdx.input.isKeyJustPressed(Input.Keys.M)) {
-            GameStateManager.getInstance().reset();
-            game.setScreen(new MainMenuScreen(game));
+        if (!fadingOut) {
+            if ((clicked && overRetry) || Gdx.input.isKeyJustPressed(Input.Keys.ENTER)) {
+                fadingOut = true;
+                pendingTransition = () -> {
+                    GameStateManager.getInstance().reset();
+                    game.setScreen(new CharacterSelectScreen(game));
+                };
+            }
+            if ((clicked && overMenu) || Gdx.input.isKeyJustPressed(Input.Keys.M)) {
+                fadingOut = true;
+                pendingTransition = () -> {
+                    GameStateManager.getInstance().reset();
+                    game.setScreen(new MainMenuScreen(game));
+                };
+            }
         }
     }
 
@@ -112,6 +152,7 @@ public class WinScreen implements Screen {
     @Override
     public void dispose() {
         if (batch       != null) { batch.dispose();       batch       = null; }
+        if (shape       != null) { shape.dispose();       shape       = null; }
         if (background  != null) { background.dispose();  background  = null; }
         if (retryNormal != null) { retryNormal.dispose(); retryNormal = null; }
         if (retryHover  != null) { retryHover.dispose();  retryHover  = null; }

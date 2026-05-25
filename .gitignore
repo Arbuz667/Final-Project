@@ -62,7 +62,6 @@ www-test/
 ## Project docs & tools (commit separately when needed):
 *.docx
 *.pdf
-run.bat
 .vscode/
 *.ipr
 *.iws

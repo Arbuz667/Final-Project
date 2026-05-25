@@ -47,4 +47,10 @@ public abstract class Weapon {
      */
     public abstract void fire(Player player, Array<Enemy> enemies,
                               Array<Projectile> projectiles);
+
+    /**
+     * Called every frame regardless of cooldown.
+     * Override for passive / aura weapons (e.g. SixSeven) that need per-frame logic.
+     */
+    public void tickPassive(float delta, Player player, Array<Enemy> enemies) { }
 }
