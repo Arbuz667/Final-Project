@@ -1,17 +1,31 @@
 package com.softchaos.screens;
 
+import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.Input;
 import com.badlogic.gdx.Screen;
+import com.badlogic.gdx.graphics.GL20;
+import com.badlogic.gdx.graphics.OrthographicCamera;
+import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
+import com.badlogic.gdx.math.Rectangle;
 import com.softchaos.SoftChaosGame;
 import com.softchaos.managers.AudioManager;
 import com.softchaos.managers.GameStateManager;
 import com.softchaos.utils.MusicType;
 
-/** Shows run statistics. Music: "Where Is My Mind". Buttons: Retry / Main Menu. */
+/** Shows run statistics after the player dies. Click / ENTER → retry, Quit / M → main menu. */
 public class GameOverScreen implements Screen {
 
+    private static final float BTN_W = 300f, BTN_H = 84f;
+
     private final SoftChaosGame game;
-    private SpriteBatch batch;
+    private SpriteBatch        batch;
+    private OrthographicCamera camera;
+
+    private Texture background;
+    private Texture retryNormal, retryHover;
+    private Texture quitNormal,  quitHover;
+    private Rectangle retryHit, quitHit;
 
     public GameOverScreen(SoftChaosGame game) {
         this.game = game;
@@ -19,30 +33,95 @@ public class GameOverScreen implements Screen {
 
     @Override
     public void show() {
-        batch = new SpriteBatch();
+        int w = Gdx.graphics.getWidth();
+        int h = Gdx.graphics.getHeight();
+        camera = new OrthographicCamera();
+        camera.setToOrtho(false, w, h);
+
+        batch      = new SpriteBatch();
+
+        background  = load("screens/death menu.png");
+        retryNormal = load("buttons/retry button.png");
+        retryHover  = load("buttons/retry button light.png");
+        quitNormal  = load("buttons/death menu quit.png");
+        quitHover   = load("buttons/death menu quit light.png");
+
+        float cx = w / 2f, cy = h / 2f;
+        retryHit = new Rectangle(cx - BTN_W / 2f, cy - 140f, BTN_W, BTN_H);
+        quitHit  = new Rectangle(cx - BTN_W / 2f, cy - 240f, BTN_W, BTN_H);
+
         AudioManager.getInstance().playMusic(MusicType.GAME_OVER);
     }
 
     @Override
     public void render(float delta) {
-        GameStateManager gsm = GameStateManager.getInstance();
-        // TODO M4: render stats: gsm.sessionTime, gsm.kills, gsm.playerLevel
-        // Retry button:    GameStateManager.getInstance().reset(); game.setScreen(new CharacterSelectScreen(game));
-        // MainMenu button: game.setScreen(new MainMenuScreen(game));
+        Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
+
+        int   sw = Gdx.graphics.getWidth();
+        int   sh = Gdx.graphics.getHeight();
+        float mx = Gdx.input.getX();
+        float my = sh - Gdx.input.getY();
+
+        boolean overRetry = retryHit.contains(mx, my);
+        boolean overQuit  = quitHit.contains(mx, my);
+        boolean clicked   = Gdx.input.justTouched();
+
+        batch.setProjectionMatrix(camera.combined);
+        batch.begin();
+
+        // Background
+        batch.draw(background, 0, 0, sw, sh);
+
+        // Buttons
+        drawBtn(retryNormal, retryHover, overRetry, retryHit);
+        drawBtn(quitNormal,  quitHover,  overQuit,  quitHit);
+
+        batch.end();
+
         AudioManager.getInstance().update(delta);
+
+        if ((clicked && overRetry) || Gdx.input.isKeyJustPressed(Input.Keys.ENTER)) {
+            GameStateManager.getInstance().reset();
+            game.setScreen(new CharacterSelectScreen(game));
+        }
+        if ((clicked && overQuit) || Gdx.input.isKeyJustPressed(Input.Keys.M)) {
+            GameStateManager.getInstance().reset();
+            game.setScreen(new MainMenuScreen(game));
+        }
+    }
+
+    private void drawBtn(Texture normal, Texture hover, boolean isHover, Rectangle hit) {
+        if (!isHover) {
+            batch.draw(normal, hit.x, hit.y, hit.width, hit.height);
+        } else {
+            // Keep same width; hover texture is taller due to glow — scale height proportionally
+            float drawH = hit.height * ((float) hover.getHeight() / normal.getHeight());
+            batch.draw(hover,
+                hit.x,
+                hit.y + hit.height / 2f - drawH / 2f,
+                hit.width, drawH);
+        }
+    }
+
+    private Texture load(String path) {
+        Texture t = new Texture(Gdx.files.internal(path));
+        t.setFilter(Texture.TextureFilter.Linear, Texture.TextureFilter.Linear);
+        return t;
     }
 
     @Override public void resize(int width, int height) {}
     @Override public void pause() {}
     @Override public void resume() {}
-
-    @Override
-    public void hide() {
-        dispose();
-    }
+    @Override public void hide() { dispose(); }
 
     @Override
     public void dispose() {
-        if (batch != null) { batch.dispose(); batch = null; }
+        if (batch       != null) { batch.dispose();       batch       = null; }
+        if (background  != null) { background.dispose();  background  = null; }
+        if (retryNormal != null) { retryNormal.dispose(); retryNormal = null; }
+        if (retryHover  != null) { retryHover.dispose();  retryHover  = null; }
+        if (quitNormal  != null) { quitNormal.dispose();  quitNormal  = null; }
+        if (quitHover   != null) { quitHover.dispose();   quitHover   = null; }
     }
 }
+

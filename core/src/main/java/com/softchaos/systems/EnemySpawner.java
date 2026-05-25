@@ -1,18 +1,38 @@
 package com.softchaos.systems;
 
+import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.math.MathUtils;
+import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.Pool;
 import com.softchaos.ai.ChaseAI;
+import com.softchaos.ai.MegalodonAI;
+import com.softchaos.ai.PickleRickAI;
+import com.softchaos.ai.RangedAI;
+import com.softchaos.ai.SlendermanAI;
+import com.softchaos.ai.SwarmAI;
+import com.softchaos.ai.TankAI;
+import com.softchaos.entities.Boss;
 import com.softchaos.entities.Enemy;
+import com.softchaos.utils.ChestType;
 import com.softchaos.utils.EnemyType;
 import com.softchaos.utils.LocationType;
 
 public class EnemySpawner {
 
-    private static final float INITIAL_INTERVAL = 2.5f;  // seconds between spawns
-    private static final float MIN_INTERVAL     = 0.4f;  // floor for scaling
-    private static final float SCALE_RATE       = 0.003f; // reduction per second
+    private static final float INITIAL_INTERVAL = 0.8f;  // seconds between spawns
+    private static final float MIN_INTERVAL     = 0.15f; // floor for scaling
+    private static final float SCALE_RATE       = 0.005f; // reduction per second
+
+    // Dynamic damage modifier: +0.1x every 30 seconds
+    private static final float DAMAGE_SCALE_INTERVAL = 30f;
+    private static final float DAMAGE_SCALE_STEP     = 0.1f;
+    private float damageMultiplier = 1.0f;
+    private float damageScaleTimer = 0f;
+
+    // Ranged enemy: spawn 1 SNIPER every 25 regular enemies
+    private static final int SNIPER_EVERY = 25;
+    private int regularSpawnCount = 0;
 
     private final Array<Enemy> activeEnemies;
     private float spawnTimer;
@@ -35,9 +55,21 @@ public class EnemySpawner {
 
     public void update(float delta, float sessionTime) {
         scaleDifficulty(sessionTime);
+
+        // Dynamic damage modifier: +0.1x every 30s
+        damageScaleTimer += delta;
+        if (damageScaleTimer >= DAMAGE_SCALE_INTERVAL) {
+            damageScaleTimer -= DAMAGE_SCALE_INTERVAL;
+            damageMultiplier += DAMAGE_SCALE_STEP;
+        }
+
         spawnTimer += delta;
         if (spawnTimer >= spawnInterval) {
             spawnEnemy(getEnemyTypeForLocation());
+            regularSpawnCount++;
+            if (regularSpawnCount % SNIPER_EVERY == 0) {
+                spawnEnemy(EnemyType.SNIPER);
+            }
             spawnTimer = 0f;
         }
     }
@@ -45,16 +77,7 @@ public class EnemySpawner {
     public void spawnEnemy(EnemyType type) {
         Enemy e = enemyPool.obtain();
         e.type = type;
-        // TODO M2: load stats from EnemyConfig via AssetLoader
-        e.maxHp  = 30f;
-        e.hp     = e.maxHp;
-        e.speed  = 3.5f;
-        e.damage = 5f;
-        e.xpDrop = 8;
-
-        // TODO M2: assign AI based on EnemyConfig.aiClass
-        e.ai = new ChaseAI();
-
+        configureEnemy(e, type);
         float[] spawn = getSpawnPoint();
         e.x = spawn[0];
         e.y = spawn[1];
@@ -62,11 +85,68 @@ public class EnemySpawner {
         activeEnemies.add(e);
     }
 
+    /** Spawns a minion of the given type at a random offset from the boss position. */
+    public void spawnMinionAt(EnemyType type, float bossX, float bossY) {
+        Enemy e = enemyPool.obtain();
+        e.type = type;
+        configureEnemy(e, type);
+        e.x = bossX + MathUtils.random(-2f, 2f);
+        e.y = bossY + MathUtils.random(-2f, 2f);
+        e.hitbox.setPosition(e.x, e.y);
+        activeEnemies.add(e);
+    }
+
+    private void configureEnemy(Enemy e, EnemyType type) {
+        switch (type) {
+            // ── FOREST ──────────────────────────────────────────────────────
+            case ALIEN:
+                e.maxHp  = 120f;  e.speed = 4.0f; e.damage = 4f;  e.xpDrop = 10;
+                e.ai = new ChaseAI();
+                break;
+            case RABBID:
+                e.maxHp  = 80f;  e.speed = 5.1f; e.damage = 3f;  e.xpDrop = 8;
+                e.ai = new SwarmAI();
+                break;
+            // ── OCEAN ────────────────────────────────────────────────────────
+            case SHARK:
+                e.maxHp  = 300f; e.speed = 4.4f; e.damage = 7f; e.xpDrop = 20;
+                e.ai = new TankAI();
+                break;
+            case JELLYFISH:
+                e.maxHp  = 235f;  e.speed = 3.2f; e.damage = 4f;  e.xpDrop = 15;
+                e.ai = new ChaseAI();
+                break;
+            // ── SPACE ─────────────────────────────────────────────────────────
+            case ROBOT:
+                e.maxHp  = 380f; e.speed = 3.5f; e.damage = 6f;  e.xpDrop = 25;
+                e.ai = new ChaseAI();
+                break;
+            case ZOMBIE:
+                e.maxHp  = 300f; e.speed = 1.5f; e.damage = 9f; e.xpDrop = 28;
+                e.ai = new TankAI();
+                break;
+            // ── RANGED ───────────────────────────────────────────────────────
+            case SNIPER:
+                e.maxHp  = 90f;  e.speed = 2.5f; e.damage = 12f; e.xpDrop = 20;
+                e.ai = new RangedAI();
+                break;
+            default:
+                e.maxHp  = 100f; e.speed = 3.5f; e.damage = 5f;  e.xpDrop = 8;
+                e.ai = new ChaseAI();
+                break;
+        }
+        e.hp              = e.maxHp;
+        e.maxHp          *= getHpMultiplier();
+        e.hp              = e.maxHp;
+        e.damage         *= damageMultiplier;
+        e.chestDropChance = 0.02f;
+        e.chestType       = ChestType.GOLD;
+    }
+
     /** Returns a random position just outside the visible screen edges. */
     public float[] getSpawnPoint() {
-        // TODO M2: use actual camera/viewport bounds
-        float screenW = com.softchaos.utils.Constants.SCREEN_WIDTH  / com.softchaos.utils.Constants.PPM;
-        float screenH = com.softchaos.utils.Constants.SCREEN_HEIGHT / com.softchaos.utils.Constants.PPM;
+        float screenW = Gdx.graphics.getWidth()  / com.softchaos.utils.Constants.PPM;
+        float screenH = Gdx.graphics.getHeight() / com.softchaos.utils.Constants.PPM;
         int side = MathUtils.random(3);
         float margin = 1.5f;
         switch (side) {
@@ -77,24 +157,92 @@ public class EnemySpawner {
         }
     }
 
+    /** HP multiplier based on location (FOREST=1x, OCEAN=2x, SPACE=3x). */
+    private float getHpMultiplier() {
+        if (location == null) return 1f;
+        switch (location) {
+            case FOREST: return 1f;
+            case OCEAN:  return 2f;
+            case SPACE:  return 3f;
+            default:     return 1f;
+        }
+    }
+
     /** Reduces spawn interval over time to scale difficulty. */
     private void scaleDifficulty(float sessionTime) {
         spawnInterval = Math.max(MIN_INTERVAL, INITIAL_INTERVAL - sessionTime * SCALE_RATE);
     }
 
     private EnemyType getEnemyTypeForLocation() {
-        // TODO M3: choose type based on location + wave progression
         if (location == null) return EnemyType.ALIEN;
         switch (location) {
-            case FOREST: return EnemyType.ALIEN;
-            case CITY:   return EnemyType.ROBOT;
-            case OCEAN:  return EnemyType.SHARK;
+            // 40% Alien (fast chaser) + 60% Rabbid (swarm)
+            case FOREST: return MathUtils.randomBoolean(0.4f) ? EnemyType.ALIEN   : EnemyType.RABBID;
+            // 55% Shark (tank) + 45% Jellyfish (slow chaser)
+            case OCEAN:  return MathUtils.randomBoolean(0.55f) ? EnemyType.SHARK  : EnemyType.JELLYFISH;
+            // 60% Robot (medium chaser) + 40% Zombie (slow tank)
+            case SPACE:  return MathUtils.randomBoolean(0.6f) ? EnemyType.ROBOT   : EnemyType.ZOMBIE;
             default:     return EnemyType.ALIEN;
         }
     }
 
     public void freeEnemy(Enemy e) {
         activeEnemies.removeValue(e, true);
-        enemyPool.free(e);
+        if (!(e instanceof Boss)) {
+            enemyPool.free(e);
+        }
+    }
+
+    /** Removes all regular enemies from the field (called when boss phase begins). */
+    public void clearNonBossEnemies() {
+        for (int i = activeEnemies.size - 1; i >= 0; i--) {
+            Enemy e = activeEnemies.get(i);
+            if (!(e instanceof Boss)) {
+                enemyPool.free(e);
+                activeEnemies.removeIndex(i);
+            }
+        }
+    }
+
+    /**
+     * Spawns a random boss (Megalodon / PickleRick / Slenderman) at the world centre.
+     * Phase thresholds: phase 2 at 66% HP, phase 3 at 33% HP.
+     */
+    public Boss spawnBoss(float worldW, float worldH) {
+        Boss boss = new Boss();
+        switch (location) {
+            case OCEAN:
+                boss.ai     = new MegalodonAI();
+                boss.maxHp  = 7500f;
+                boss.speed  = 3f;
+                boss.damage = 15f;
+                boss.type   = EnemyType.MEGALODON;
+                boss.knockbackImmune = true;
+                break;
+            case SPACE:
+                boss.ai     = new PickleRickAI();
+                boss.maxHp  = 13500f;
+                boss.speed  = 4.5f;
+                boss.damage = 17.5f;
+                boss.type   = EnemyType.PICKLE_RICK;
+                boss.knockbackImmune = true;
+                break;
+            default: // FOREST
+                boss.ai     = new SlendermanAI();
+                boss.maxHp  = 5000f;
+                boss.speed  = 2f;
+                boss.damage = 10f;
+                boss.type   = EnemyType.SLENDERMAN;
+                break;
+        }
+        boss.hp              = boss.maxHp;
+        boss.xpDrop          = 200;
+        boss.chestDropChance = 0f;
+        boss.hitbox          = new Rectangle(0, 0, 1.5f, 1.5f);
+        boss.x = worldW / 2f;
+        boss.y = worldH / 2f;
+        boss.hitbox.setPosition(boss.x - 0.75f, boss.y - 0.75f);
+        activeEnemies.add(boss);
+        return boss;
     }
 }

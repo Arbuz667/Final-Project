@@ -11,10 +11,20 @@ import com.softchaos.entities.Player;
  */
 public abstract class BossAI implements EnemyAI {
 
+    /** Called when the boss wants to spawn minions at its current position. */
+    public interface MinionSpawnCallback {
+        void spawn(float bossX, float bossY);
+    }
+
     public enum State { IDLE, CHASE, ATTACK, PHASE_CHANGE }
 
     protected State state = State.IDLE;
     protected float stateTimer = 0f;
+    protected MinionSpawnCallback minionCallback;
+
+    public void setMinionCallback(MinionSpawnCallback cb) {
+        this.minionCallback = cb;
+    }
 
     @Override
     public void update(Enemy self, Player player, float delta) {
@@ -45,7 +55,13 @@ public abstract class BossAI implements EnemyAI {
     }
 
     protected void handleChase(Boss self, Player player, float delta) {
-        // TODO M3: move toward player
+        float dx = player.x - self.x;
+        float dy = player.y - self.y;
+        float len = (float) Math.sqrt(dx * dx + dy * dy);
+        if (len > 0) {
+            self.x += (dx / len) * self.speed * delta;
+            self.y += (dy / len) * self.speed * delta;
+        }
     }
 
     protected abstract void handleAttack(Boss self, Player player, float delta);

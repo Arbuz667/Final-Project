@@ -58,6 +58,11 @@ www-test/
 
 ## IntelliJ, Android Studio:
 .idea/
+
+## Project docs & tools (commit separately when needed):
+*.docx
+*.pdf
+.vscode/
 *.ipr
 *.iws
 *.iml
