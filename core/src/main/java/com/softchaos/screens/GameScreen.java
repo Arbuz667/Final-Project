@@ -913,22 +913,27 @@ public class GameScreen implements Screen,
         shapeRenderer.rect(sw - 140f, topStripY + 5f, 132f, 28f);
 
         // ── Weapon inventory slots (bottom-center) ───────────────────
-        float slotW = 130f, slotH = 66f, slotGap = 8f;
+        float slotW = 180f, slotH = 80f, slotGap = 6f;
         float slotsTotal = Constants.PLAYER_MAX_WEAPONS * slotW + (Constants.PLAYER_MAX_WEAPONS - 1) * slotGap;
         float slotStartX = (sw - slotsTotal) / 2f;
-        float slotY = 4f;
+        float slotY = 0f;
         for (int i = 0; i < Constants.PLAYER_MAX_WEAPONS; i++) {
             float sx = slotStartX + i * (slotW + slotGap);
             boolean filled = i < player.weapons.size;
-            shapeRenderer.setColor(0f, 0f, 0f, filled ? 0.72f : 0.35f);
+            // Dark background
+            shapeRenderer.setColor(0f, 0f, 0f, filled ? 0.80f : 0.38f);
             shapeRenderer.rect(sx, slotY, slotW, slotH);
+            // Left rarity accent bar (4px)
             if (filled) {
                 float[] rc = rarityRGB(player.weapons.get(i).rarity);
-                shapeRenderer.setColor(rc[0], rc[1], rc[2], 0.9f);
+                shapeRenderer.setColor(rc[0], rc[1], rc[2], 1f);
             } else {
-                shapeRenderer.setColor(0.18f, 0.18f, 0.22f, 0.5f);
+                shapeRenderer.setColor(0.22f, 0.22f, 0.28f, 0.6f);
             }
-            shapeRenderer.rect(sx, slotY + slotH - 4f, slotW, 4f);
+            shapeRenderer.rect(sx, slotY, 4f, slotH);
+            // Subtle top highlight
+            shapeRenderer.setColor(1f, 1f, 1f, filled ? 0.10f : 0.05f);
+            shapeRenderer.rect(sx + 4f, slotY + slotH - 2f, slotW - 4f, 2f);
         }
 
         shapeRenderer.end();
@@ -975,46 +980,68 @@ public class GameScreen implements Screen,
         hudFont.draw(batch, "K: " + kills, sw - 134f, topStripY + topStripH - 10f);
 
         // ── Weapon inventory slots text ──────────────────────
-        slotW = 130f; slotH = 66f; slotGap = 8f;
+        slotW = 180f; slotH = 80f; slotGap = 6f;
         slotsTotal = Constants.PLAYER_MAX_WEAPONS * slotW + (Constants.PLAYER_MAX_WEAPONS - 1) * slotGap;
         slotStartX = (sw - slotsTotal) / 2f;
-        slotY = 4f;
+        slotY = 0f;
         for (int i = 0; i < Constants.PLAYER_MAX_WEAPONS; i++) {
             float sx = slotStartX + i * (slotW + slotGap);
             boolean filled = i < player.weapons.size;
-            // Slot index number
-            hudFont.getData().setScale(0.95f);
-            hudFont.setColor(0.45f, 0.45f, 0.5f, 0.8f);
-            hudFont.draw(batch, String.valueOf(i + 1), sx + 5f, slotY + slotH - 4f);
+
+            // Slot index — top-right corner, tiny, dim
+            hudFont.getData().setScale(0.78f);
+            hudFont.setColor(0.5f, 0.5f, 0.55f, 0.65f);
+            hudFont.draw(batch, String.valueOf(i + 1), sx + slotW - 13f, slotY + slotH - 3f);
+
             if (filled) {
                 Weapon w = player.weapons.get(i);
-                // Icon on left
+                // Icon — left side, vertically centered
                 Texture wIcon = weaponIcons.get(w.id);
-                float iconSz = 52f;
+                float iconSz = 60f;
                 if (wIcon != null)
-                    batch.draw(wIcon, sx + 5f, slotY + (slotH - iconSz) / 2f, iconSz, iconSz);
-                // Name + stats on right
-                float textX = sx + 62f;
-                float textAreaW = slotW - 62f - 4f;
-                hudFont.getData().setScale(1.1f);
-                hudFont.setColor(Color.WHITE);
+                    batch.draw(wIcon, sx + 10f, slotY + (slotH - iconSz) / 2f, iconSz, iconSz);
+
+                // Text area to the right of icon
+                float textX  = sx + 76f;
+                float textW  = slotW - 76f - 8f;   // 96px
+
+                // Weapon name — centered, with shadow
+                hudFont.getData().setScale(1.05f);
                 glyphLayout.setText(hudFont, w.name);
-                hudFont.draw(batch, w.name, textX + (textAreaW - glyphLayout.width) / 2f, slotY + slotH - 14f);
-                hudFont.getData().setScale(0.9f);
-                hudFont.setColor(Color.YELLOW);
+                float nameX = textX + (textW - glyphLayout.width) / 2f;
+                float nameY = slotY + slotH - 13f;
+                hudFont.setColor(0f, 0f, 0f, 0.75f);
+                hudFont.draw(batch, w.name, nameX + 1f, nameY - 1f);
+                hudFont.setColor(Color.WHITE);
+                hudFont.draw(batch, w.name, nameX, nameY);
+
+                // DMG — centered, with shadow
                 String dmgStr = String.format("%.0f DMG", w.damage);
+                hudFont.getData().setScale(0.92f);
                 glyphLayout.setText(hudFont, dmgStr);
-                hudFont.draw(batch, dmgStr, textX + (textAreaW - glyphLayout.width) / 2f, slotY + 24f);
-                hudFont.getData().setScale(0.85f);
-                hudFont.setColor(new Color(0.6f, 0.8f, 1f, 1f));
+                float dmgX = textX + (textW - glyphLayout.width) / 2f;
+                float dmgY = slotY + 48f;
+                hudFont.setColor(0f, 0f, 0f, 0.75f);
+                hudFont.draw(batch, dmgStr, dmgX + 1f, dmgY - 1f);
+                hudFont.setColor(1f, 0.95f, 0.35f, 1f);
+                hudFont.draw(batch, dmgStr, dmgX, dmgY);
+
+                // CD — centered, with shadow
                 String cdStr = String.format("%.1fs CD", w.cooldown);
                 glyphLayout.setText(hudFont, cdStr);
-                hudFont.draw(batch, cdStr, textX + (textAreaW - glyphLayout.width) / 2f, slotY + 11f);
+                float cdX = textX + (textW - glyphLayout.width) / 2f;
+                float cdY = slotY + 30f;
+                hudFont.setColor(0f, 0f, 0f, 0.75f);
+                hudFont.draw(batch, cdStr, cdX + 1f, cdY - 1f);
+                hudFont.setColor(0.55f, 0.85f, 1f, 1f);
+                hudFont.draw(batch, cdStr, cdX, cdY);
             } else {
-                hudFont.getData().setScale(1.0f);
-                hudFont.setColor(0.28f, 0.28f, 0.32f, 0.8f);
-                glyphLayout.setText(hudFont, "- empty -");
-                hudFont.draw(batch, "- empty -", sx + (slotW - glyphLayout.width) / 2f, slotY + slotH / 2f + 6f);
+                hudFont.getData().setScale(0.9f);
+                hudFont.setColor(0.3f, 0.3f, 0.35f, 0.65f);
+                glyphLayout.setText(hudFont, "EMPTY");
+                hudFont.draw(batch, "EMPTY",
+                    sx + (slotW - glyphLayout.width) / 2f,
+                    slotY + slotH / 2f + 5f);
             }
         }
 
